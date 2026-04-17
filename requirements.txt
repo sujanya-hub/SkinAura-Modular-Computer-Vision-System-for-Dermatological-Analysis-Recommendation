@@ -1,59 +1,8 @@
-# ── Core framework ────────────────────────────────────────────────────────────
-# SkinAura Dataset Pipeline — Dependencies
-# Install with: pip install -r requirements.txt
-
-# Image downloading
-icrawler==0.6.6
-
-# Image processing
-Pillow>=10.0.0
-opencv-python>=4.8.0
-numpy>=1.24.0
-
-# Perceptual hashing for deduplication
-ImageHash>=4.3.1
-
-# Progress bars
-tqdm>=4.66.0
-
-# (Standard library modules used: os, sys, argparse, logging, json, time, pathlib, datetime, warnings)
-
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-python-multipart==0.0.12
-
-# ── Configuration & validation ────────────────────────────────────────────────
-pydantic==2.9.2
-pydantic-settings==2.6.1
-python-dotenv==1.0.1
-
-# ── Computer Vision ───────────────────────────────────────────────────────────
-opencv-python==4.10.0.84
-Pillow==11.0.0
-numpy==1.26.4
-
-# ── Machine Learning (PyTorch CPU — swap for +cu121 on GPU hosts) ─────────────
-torch==2.5.1
-torchvision==0.20.1
-
-# ── Embeddings & Vector Store ─────────────────────────────────────────────────
-sentence-transformers==3.3.1
-faiss-cpu==1.9.0
-
-# ── LLM ───────────────────────────────────────────────────────────────────────
-groq==0.11.0
-
-# ── Frontend ──────────────────────────────────────────────────────────────────
-streamlit==1.40.1
-
-# ── HTTP client (used by frontend) ────────────────────────────────────────────
-requests==2.32.3
-
-# ── Data handling ─────────────────────────────────────────────────────────────
-pandas==2.2.3
-
-# ── Optional persistence ──────────────────────────────────────────────────────
-SQLAlchemy==2.0.36
-
-# ── Utilities ─────────────────────────────────────────────────────────────────
-httpx==0.27.2
+fastapi
+uvicorn
+pydantic
+numpy
+pillow
+opencv-python
+tensorflow
+python-multipart
