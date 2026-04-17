@@ -1,0 +1,82 @@
+from pathlib import Path
+import cv2
+import numpy as np
+import imagehash
+from PIL import Image
+
+DATASET_DIR = Path("dataset")
+VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
+def get_image_files(folder: Path):
+    return [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in VALID_EXTENSIONS]
+
+
+def clean_class_folder(class_dir: Path):
+    image_files = get_image_files(class_dir)
+    total_before = len(image_files)
+    removed = 0
+    seen_hashes = {}
+
+    for image_path in image_files:
+        try:
+            with Image.open(image_path) as img:
+                img.load()
+
+                # REMOVE SMALL IMAGES
+                if img.width < 100 or img.height < 100:
+                    image_path.unlink(missing_ok=True)
+                    removed += 1
+                    continue
+
+                # CONVERT TO RGB
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                    img.save(image_path)
+
+                # ADD BLUR DETECTION HERE
+                img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
+                laplacian_var = cv2.Laplacian(img_cv, cv2.CV_64F).var()
+
+                if laplacian_var < 50:
+                    image_path.unlink(missing_ok=True)
+                    removed += 1
+                    continue
+
+                # DUPLICATE DETECTION (SMART)
+                img_hash = imagehash.phash(img)
+
+                duplicate_found = False
+                for existing_hash in seen_hashes:
+                    if img_hash - existing_hash <= 5:
+                        duplicate_found = True
+                        break
+
+                if duplicate_found:
+                    image_path.unlink(missing_ok=True)
+                    removed += 1
+                else:
+                    seen_hashes[img_hash] = image_path
+
+        except Exception:
+            image_path.unlink(missing_ok=True)
+            removed += 1
+            continue
+
+    remaining = len(get_image_files(class_dir))
+    print(f"{class_dir.name}: before={total_before}, removed={removed}, remaining={remaining}")
+
+
+def main():
+    if not DATASET_DIR.exists():
+        print(f"Dataset folder not found: {DATASET_DIR}")
+        return
+
+    class_dirs = [p for p in DATASET_DIR.iterdir() if p.is_dir()]
+
+    for class_dir in sorted(class_dirs):
+        clean_class_folder(class_dir)
+
+
+if __name__ == "__main__":
+    main()

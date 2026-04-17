@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+.venv/
+
+# Data / Large files
+datasets/
+*.zip
+
+# IDE
+.vscode/
+
+# Env
+.env
+
+# Models (optional if large)
+*.h5
+*.keras
+*.pt
+
+# Logs
+logs/
+
+# FAISS / vector DB
+*.index
+*.pkl
+
+# Optional
+backend/rag/faiss*

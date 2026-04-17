@@ -1,0 +1,218 @@
+[
+  {
+    "id": "kb_acne_001",
+    "category": "acne",
+    "title": "Understanding Acne: Causes and First-Line Cosmetic Approach",
+    "text": "Acne develops when sebaceous glands overproduce sebum, pores become blocked with dead skin cells, and Cutibacterium acnes bacteria proliferate. For mild to moderate comedonal and inflammatory acne, the evidence-based first-line cosmetic ingredients are salicylic acid (BHA, 0.5–2%), which penetrates lipid-rich pores to dissolve debris; benzoyl peroxide (2.5–5%), which kills bacteria and reduces sebum; and niacinamide (4–5%), which lowers sebum production and calms post-acne redness. Gentle twice-daily cleansing with a low-pH gel or foam cleanser prevents over-stripping while keeping pores clear.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["acne", "salicylic acid", "benzoyl peroxide", "niacinamide", "BHA", "comedones"]
+  },
+  {
+    "id": "kb_acne_002",
+    "category": "acne",
+    "title": "Morning Routine for Acne-Prone Skin",
+    "text": "For acne-prone skin, a minimal and effective morning routine follows this order: (1) low-pH gel cleanser — avoid harsh sulphate-heavy formulas that strip the barrier; (2) niacinamide 4–5% serum or toner to regulate sebum and soothe; (3) lightweight, non-comedogenic moisturiser with glycerin or hyaluronic acid; (4) broad-spectrum SPF 30+ in a gel or fluid finish — chemical filters like octinoxate or mineral zinc oxide both work well. Avoid heavy, occlusive, or fragrance-heavy products. Reapply SPF every two hours outdoors.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["acne", "morning routine", "SPF", "niacinamide", "non-comedogenic"]
+  },
+  {
+    "id": "kb_acne_003",
+    "category": "acne",
+    "title": "Evening Routine for Acne-Prone Skin",
+    "text": "An effective evening routine for acne-prone skin begins with double cleansing when sunscreen or makeup has been worn: a micellar water or oil-free balm cleanser first, followed by a gel cleanser. After cleansing, apply a targeted leave-on treatment: salicylic acid 2% for blackheads, benzoyl peroxide 2.5% spot treatment for active lesions, or an adapalene 0.1% gel (OTC in many countries) two to three times per week for persistent inflammatory acne. Finish with a lightweight non-comedogenic moisturiser. Never skip moisturiser — dehydration worsens oil overproduction.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["acne", "evening routine", "salicylic acid", "adapalene", "double cleanse", "retinoid"]
+  },
+  {
+    "id": "kb_acne_004",
+    "category": "acne",
+    "title": "Post-Inflammatory Hyperpigmentation from Acne (PIH)",
+    "text": "Post-inflammatory hyperpigmentation (PIH) is the flat brown or dark mark left after an acne lesion resolves. It is more pronounced and persistent in Fitzpatrick skin types IV–VI. To fade PIH cosmetically: use alpha arbutin 1–2% or tranexamic acid 2–5% to inhibit melanin synthesis; add vitamin C serum (L-ascorbic acid 10–15% or ascorbyl glucoside 2%) for antioxidant brightening; and apply SPF 50 daily without exception, as UV exposure dramatically deepens PIH. Avoid picking or squeezing lesions — mechanical trauma is the leading cause of severe PIH.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["acne", "PIH", "hyperpigmentation", "alpha arbutin", "tranexamic acid", "Fitzpatrick IV", "dark skin tones"]
+  },
+  {
+    "id": "kb_acne_005",
+    "category": "acne",
+    "title": "When to See a Dermatologist for Acne",
+    "text": "A dermatologist should be consulted when: acne is severe (deep nodules or cysts), widespread, or rapidly worsening; OTC treatments have not improved it after 12 weeks of consistent use; it is leaving permanent scars; or it is causing significant psychological distress. Prescription options — oral isotretinoin, topical retinoids (tretinoin, tazarotene), oral antibiotics, and hormonal therapies — have a substantially better evidence base for moderate-to-severe acne than any OTC cosmetic product. This analysis is for cosmetic guidance only and does not substitute for professional dermatological assessment.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["acne", "dermatologist", "isotretinoin", "prescription", "severe acne", "disclaimer"]
+  },
+  {
+    "id": "kb_dry_001",
+    "category": "dryness",
+    "title": "Restoring the Moisture Barrier in Dry Skin",
+    "text": "Dry skin results from a compromised stratum corneum that loses water too rapidly (transepidermal water loss, TEWL) or lacks sufficient lipids. The moisture-barrier repair approach layers three ingredient types: (1) humectants — hyaluronic acid (multiple molecular weights), glycerin, sodium PCA, and urea (5–10%) draw water into the epidermis; (2) emollients — ceramides (especially ceramide NP, NS, EOS), fatty acids, and cholesterol fill intercellular gaps and soften the texture; (3) occlusives — petrolatum, dimethicone, shea butter, and squalane seal the surface and prevent TEWL. Apply moisturiser to slightly damp skin immediately after cleansing.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["dryness", "dry skin", "hyaluronic acid", "ceramides", "barrier repair", "TEWL", "squalane", "glycerin"]
+  },
+  {
+    "id": "kb_dry_002",
+    "category": "dryness",
+    "title": "Cleansing Tips for Dry and Sensitive Skin",
+    "text": "Harsh cleansers are the most common cause of iatrogenic dryness. For dry or compromised skin, use a cream, balm, or low-lather micellar cleanser with a pH of 4.5–6.0. Avoid sodium lauryl sulphate (SLS), high-fragrance formulas, foaming beads, and physical scrubs. Cleanse once daily in the evening only; rinse with lukewarm (not hot) water. In very dry climates or winter, morning water rinse alone is sufficient. Pat skin dry with a soft towel — never rub. A rich, occlusive moisturiser applied within 60 seconds of cleansing significantly reduces TEWL.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["dryness", "cleanser", "SLS-free", "barrier", "sensitive skin", "cream cleanser"]
+  },
+  {
+    "id": "kb_oil_001",
+    "category": "oiliness",
+    "title": "Managing Oily Skin Without Damaging the Barrier",
+    "text": "Oily skin is driven by hyperactive sebaceous glands stimulated by androgens, heat, and humidity — factors particularly relevant in tropical and semi-arid Indian climates. Stripping the skin with harsh cleansers or alcohol-heavy toners backfires by triggering compensatory sebum overproduction. Evidence-based cosmetic management: use a gel cleanser with salicylic acid 0.5–1% twice daily; apply niacinamide 4–5% which demonstrably reduces sebum excretion after 4–8 weeks; choose a water-based, oil-free, non-comedogenic moisturiser; and never skip SPF, using a gel or invisible-finish sunscreen. Blotting papers provide instant mattification without disrupting the barrier.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["oiliness", "oily skin", "sebum", "niacinamide", "gel cleanser", "Indian climate", "tropical skin"]
+  },
+  {
+    "id": "kb_oil_002",
+    "category": "oiliness",
+    "title": "Clay Masks and Weekly Treatments for Oily Skin",
+    "text": "Kaolin and bentonite clay masks absorb excess surface sebum and can temporarily reduce pore prominence when used once or twice weekly. Leave on for 10–15 minutes and remove with warm water — over-drying causes skin stress and rebound oiliness. BHA (salicylic acid) exfoliants used 2–3 times per week help keep pores clear: start at 1% and increase to 2% if tolerated. Niacinamide toner or essence applied daily is more effective at reducing long-term sebum output than any weekly treatment. Avoid silicone-heavy primers layered with sunscreen; they can trap sebum and worsen breakouts.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["oiliness", "clay mask", "kaolin", "BHA", "niacinamide", "exfoliation", "pore care"]
+  },
+  {
+    "id": "kb_hyper_001",
+    "category": "hyperpigmentation",
+    "title": "Types and Cosmetic Management of Hyperpigmentation",
+    "text": "Hyperpigmentation encompasses melasma (hormone-driven), PIH (post-inflammatory), sun spots (solar lentigines), and periorbital darkening. Cosmetically active brightening ingredients inhibit tyrosinase — the enzyme central to melanin synthesis. The best-evidenced cosmetic options are: tranexamic acid (2–5%, oral or topical) which blocks melanin transfer; alpha arbutin (1–2%), a stable tyrosinase inhibitor well-tolerated on darker tones; vitamin C (L-ascorbic acid 10–20% or stabilised derivatives) for antioxidant and brightening action; azelaic acid (10–15%) for PIH and mild melasma; and kojic acid (1–2%) for general brightening. For melasma specifically, combination with SPF 50 PA++++ is non-negotiable.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["hyperpigmentation", "melasma", "PIH", "alpha arbutin", "tranexamic acid", "vitamin C", "azelaic acid"]
+  },
+  {
+    "id": "kb_hyper_002",
+    "category": "hyperpigmentation",
+    "title": "SPF and Hyperpigmentation: Why It Is Non-Negotiable",
+    "text": "Ultraviolet (UV) radiation is the primary stimulus for melanin synthesis; without daily sun protection, any brightening ingredient is largely ineffective. For hyperpigmentation use a broad-spectrum sunscreen with SPF 50 and PA++++ (high UVA protection), applied as the final morning skincare step. Reapply every 2 hours when outdoors. In Indian summers, lightweight fluid sunscreens or sunsticks are practical for reapplication over makeup. Iron oxide–containing tinted sunscreens provide additional visible-light protection relevant for melasma. Physical sun avoidance — hats, umbrellas, seeking shade between 11 am and 3 pm — amplifies SPF efficacy meaningfully.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["hyperpigmentation", "SPF", "sunscreen", "UVA", "PA++++", "melasma", "Indian skin"]
+  },
+  {
+    "id": "kb_redness_001",
+    "category": "redness",
+    "title": "Soothing Persistent Redness and Facial Sensitivity",
+    "text": "Chronic facial redness has three main cosmetic causes: rosacea, a compromised barrier, or reactive skin from over-exfoliation. Soothing cosmetic ingredients include: centella asiatica (CICA) extract which accelerates barrier repair and reduces erythema; green tea extract (EGCG) with potent antioxidant and anti-inflammatory properties; azelaic acid (10%) which reduces rosacea-related redness; bisabolol for calming; and colloidal oatmeal (1%) which soothes irritated skin. Avoid fragrance, denatured alcohol (SD alcohol), menthol, physical exfoliants, and AHA/BHA when the barrier is already compromised. Niacinamide at 4–5% strengthens the barrier and reduces flushing over several weeks.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["redness", "rosacea", "sensitivity", "centella asiatica", "CICA", "azelaic acid", "green tea", "barrier repair"]
+  },
+  {
+    "id": "kb_redness_002",
+    "category": "redness",
+    "title": "Rosacea: Cosmetic Management and Dermatologist Referral",
+    "text": "Rosacea is a chronic inflammatory condition characterised by persistent central facial redness, visible blood vessels, papules, and pustules. Cosmetic management focuses on trigger avoidance (spicy food, alcohol, extremes of temperature, UV, aggressive skincare), barrier repair with ceramide-based moisturisers, and protective SPF use. Azelaic acid 10–15% (OTC in some markets) is modestly effective for papulopustular rosacea. However, prescription treatments — metronidazole gel, ivermectin cream, brimonidine gel, and oral low-dose doxycycline — have a far stronger evidence base. Any patient with moderate or severe rosacea, or rosacea affecting the eyes (ocular rosacea), should see a dermatologist.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["redness", "rosacea", "dermatologist", "azelaic acid", "SPF", "trigger avoidance"]
+  },
+  {
+    "id": "kb_dark_001",
+    "category": "dark_circles",
+    "title": "Under-Eye Dark Circles: Causes and Cosmetic Management",
+    "text": "Under-eye dark circles have multiple causes: vascular visibility through thin periorbital skin (bluish-purple tone), melanin pigmentation (brownish tone), volume loss and shadowing (structural), and lifestyle factors including poor sleep and dehydration. Cosmetically active ingredients: caffeine (1–3%) transiently constricts microvessels and reduces puffiness; vitamin K may improve vascular dark circles; alpha arbutin and vitamin C address pigment-related darkness; retinol (low concentration, 0.025–0.05%) thickens the delicate periorbital dermis over 12+ weeks. Apply eye products with a light tapping motion using the ring finger — the thinnest skin in this area is easily irritated by rubbing.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["dark_circles", "under-eye", "caffeine", "vitamin K", "retinol", "puffiness", "periorbital"]
+  },
+  {
+    "id": "kb_wrinkle_001",
+    "category": "wrinkles",
+    "title": "Anti-Ageing Cosmetic Strategy: Fine Lines and Wrinkles",
+    "text": "Fine lines and wrinkles result from photoageing, collagen loss, and repeated facial movement. The most evidence-backed cosmetic anti-ageing approach combines: (1) retinoids — retinol (0.025–0.3%) or retinaldehyde stimulate collagen synthesis and accelerate cell turnover; start slowly (2 nights per week) and increase; (2) vitamin C (L-ascorbic acid 10–20%) protects existing collagen from UV-induced oxidation; (3) peptides (palmitoyl pentapeptide-4 / Matrixyl 3000) signal fibroblasts to produce collagen; (4) SPF 50 daily — photoprotection prevents 90% of extrinsic ageing; (5) physical treatments — sleeping on a silk pillowcase reduces compression wrinkles.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["wrinkles", "anti-ageing", "retinol", "retinaldehyde", "vitamin C", "peptides", "collagen", "SPF"]
+  },
+  {
+    "id": "kb_wrinkle_002",
+    "category": "wrinkles",
+    "title": "Introducing Retinoids Safely",
+    "text": "Retinoids are the gold-standard cosmetic anti-ageing ingredient but require a careful introduction protocol to avoid 'retinoid purge' — an initial period of peeling, redness, and sensitivity. Start with retinol 0.025–0.05% applied to dry skin two nights per week after moisturiser (buffering method). After four weeks with no reaction, increase to every other night. After eight weeks, move to nightly use or step up to retinaldehyde 0.05%. Never combine with AHA/BHA, benzoyl peroxide, or vitamin C on the same evening. Use a bland, ceramide-rich moisturiser and SPF 50 diligently during the introduction phase. Avoid retinoids in pregnancy.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["wrinkles", "retinol", "retinoid", "anti-ageing", "retinoid purge", "introduction", "buffering method"]
+  },
+  {
+    "id": "kb_sun_001",
+    "category": "general",
+    "title": "Sunscreen: The Single Most Effective Anti-Ageing and Skin-Health Step",
+    "text": "Daily broad-spectrum sunscreen is the most impactful skin-health intervention available over the counter. UV radiation causes premature ageing (photoageing), hyperpigmentation, barrier damage, and skin cancer. Use SPF 30 minimum (SPF 50 preferred) with UVA protection (PA++++ or high UVA-PF). Apply as the final morning step in 1/4 teaspoon volume (about 1 gram) for the face and neck. Reapply every two hours during outdoor activity. Both chemical (organic) filters — octinoxate, avobenzone, oxybenzone, tinosorb — and physical (inorganic) filters — zinc oxide, titanium dioxide — are effective; combination formulas offer broad-spectrum coverage. In Indian summers, water-resistant formulas are recommended.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["SPF", "sunscreen", "UV", "UVA", "UVB", "PA++++", "anti-ageing", "photoprotection", "Indian summer"]
+  },
+  {
+    "id": "kb_ingredients_001",
+    "category": "ingredients",
+    "title": "Ingredient Combinations to Avoid",
+    "text": "Certain active ingredient pairings reduce efficacy or cause irritation: (1) Retinol + AHA or BHA on the same evening — risk of over-exfoliation and barrier compromise; use on alternate evenings. (2) Vitamin C (L-ascorbic acid, pH <3.5) + niacinamide — at high concentrations they can form niacin that causes transient flushing; modern stabilised formulations largely mitigate this, but avoid formulating both at peak activity. (3) Benzoyl peroxide + retinol — benzoyl peroxide oxidises and deactivates retinol; use on different evenings or zones. (4) Multiple exfoliants simultaneously (AHA + BHA + physical) — barrier disruption is almost certain. (5) Vitamin C + copper peptides — competing reduction-oxidation chemistry reduces both.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["ingredients", "ingredient pairing", "retinol", "vitamin C", "AHA", "BHA", "niacinamide", "benzoyl peroxide", "combinations to avoid"]
+  },
+  {
+    "id": "kb_ingredients_002",
+    "category": "ingredients",
+    "title": "Beneficial Ingredient Pairings",
+    "text": "Complementary ingredient pairings enhance efficacy and skin tolerance: (1) Vitamin C + vitamin E + ferulic acid — ferulic acid doubles the photoprotective efficacy of vitamins C and E; this trio is the gold-standard antioxidant combination. (2) Niacinamide + retinol — niacinamide reduces retinoid-induced irritation, making this a recommended pairing for sensitive skin. (3) Hyaluronic acid + a moisturiser applied on damp skin — occlusion traps the hydration drawn in by HA. (4) AHA (glycolic or lactic acid) + SPF — AHA increases photosensitivity, making SPF the mandatory companion. (5) Ceramides + cholesterol + fatty acids in a 1:1:1 or similar ratio — this mixture matches the natural lamellar structure of the stratum corneum and repairs barrier most effectively.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["ingredients", "ingredient pairing", "vitamin C", "vitamin E", "ferulic acid", "niacinamide", "retinol", "ceramides", "AHA"]
+  },
+  {
+    "id": "kb_patch_001",
+    "category": "general",
+    "title": "Patch Testing: How and Why",
+    "text": "Patch testing is the standard safety step before applying any new active product to the face. Apply a small amount (rice-grain size) to the inner arm or behind the ear and leave for 24–48 hours. If redness, itching, swelling, or a raised rash develops, do not use the product. For higher-actives (retinoids, AHAs, vitamin C), also perform a face test on a small area — one cheek — for 3–5 days before full-face use. Introduce only one new product at a time so reactions can be attributed correctly. Wait two weeks between introducing new actives. This protocol is especially important for reactive, eczema-prone, or sensitised skin.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["patch testing", "allergy", "sensitivity", "safety", "introduction protocol", "active ingredients"]
+  },
+  {
+    "id": "kb_tone_001",
+    "category": "skin_tone",
+    "title": "Skincare for Fitzpatrick Types IV–VI (Brown to Deep Skin Tones)",
+    "text": "Darker skin tones (Fitzpatrick IV–VI) have higher melanin density offering partial natural UV protection, but carry a significantly elevated risk of post-inflammatory hyperpigmentation (PIH) from any inflammation, trauma, or harsh cosmetic intervention. Avoid: high-concentration chemical peels (>15% AHA), physical scrubs, and products not tested on deeper tones. Prefer: gentle chemical exfoliation (mandelic acid, PHAs), brightening actives tolerated on deeper tones (alpha arbutin, tranexamic acid, azelaic acid), and SPF 50 PA++++ daily. Ingredients like kojic acid and high-percentage vitamin C may cause photosensitivity and should be introduced very cautiously.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["skin tone", "Fitzpatrick IV", "Fitzpatrick V", "Fitzpatrick VI", "Brown skin", "deep skin tone", "PIH", "Indian skin", "South Asian skin", "dark skin"]
+  },
+  {
+    "id": "kb_tone_002",
+    "category": "skin_tone",
+    "title": "Skincare for Fitzpatrick Types I–II (Fair to Very Fair Skin)",
+    "text": "Very fair and fair skin (Fitzpatrick I–II) has low melanin production, making it most susceptible to UV-induced damage, premature photoageing, and a higher lifetime risk of skin cancer. SPF 50 or higher is essential. This skin type is also more prone to visible flushing, telangiectasia, and contact sensitivity. Antioxidant layering (vitamin C + E + ferulic acid) before SPF provides meaningful additive photoprotection. A simple, minimal routine with fragrance-free, dye-free products reduces reactivity. Regular dermatological skin checks for atypical moles are recommended.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["skin tone", "Fitzpatrick I", "Fitzpatrick II", "fair skin", "pale skin", "SPF", "photoageing", "skin cancer risk"]
+  },
+  {
+    "id": "kb_tone_003",
+    "category": "skin_tone",
+    "title": "Undertone-Aware Product Guidance",
+    "text": "Skin undertone — warm (golden, yellow, peachy), cool (pink, red, bluish), or neutral — influences colour-matching for cosmetics and can guide ingredient selection. Warm undertones: vitamin C enhances natural radiance; gold-toned highlighters, peach or coral blush. Cool undertones: niacinamide helps balance redness prevalent in cooler-toned skin; silver or rose-gold highlighters, berry or rose blush. Neutral undertones: flexible across most shade ranges. For skincare efficacy, undertone is less significant than skin type, concern, and phototype. Foundation shade matching is most accurate when tested on the jawline in natural light.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["undertone", "warm undertone", "cool undertone", "neutral undertone", "foundation", "colour matching", "niacinamide"]
+  },
+  {
+    "id": "kb_routine_001",
+    "category": "general",
+    "title": "Building a Minimal Effective Skincare Routine",
+    "text": "An evidence-based minimal routine requires only three steps: (1) cleanse — a gentle, pH-balanced cleanser suited to your skin type, once or twice daily; (2) moisturise — a barrier-supportive moisturiser with ceramides, glycerin, or hyaluronic acid applied to damp skin; (3) protect — broad-spectrum SPF 30+ as the final morning step. With these three steps alone, the skin barrier is maintained and photodamage is meaningfully reduced. Any additional active (vitamin C, retinol, niacinamide, AHA, BHA) is an optional enhancement layered on this foundation. Introduce one new product at a time, two weeks apart.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["routine", "minimal routine", "cleanser", "moisturiser", "SPF", "beginner", "basic skincare"]
+  },
+  {
+    "id": "kb_dermatologist_001",
+    "category": "general",
+    "title": "When Over-the-Counter Skincare Is Not Enough",
+    "text": "A dermatologist should be consulted when: (1) any skin condition causes significant discomfort, is rapidly spreading, or is associated with systemic symptoms (fever, joint pain); (2) acne or pigmentation has not improved after 12 weeks of consistent OTC treatment; (3) there are unusual moles, changing skin lesions, or unexplained lumps; (4) eczema, psoriasis, or suspected contact dermatitis is affecting quality of life; (5) oral isotretinoin, prescription retinoids, or antibiotic treatment is being considered. SkinAura provides cosmetic guidance only. This analysis is not a diagnosis, and no AI system can replace a qualified dermatologist for assessment of clinical skin conditions.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["dermatologist", "disclaimer", "OTC limits", "prescription", "diagnosis", "medical advice", "clinical skin conditions"]
+  },
+  {
+    "id": "kb_hydraiton_001",
+    "category": "general",
+    "title": "Hydration vs Moisture: Understanding the Difference",
+    "text": "Skin hydration refers to the water content of the stratum corneum; skin moisture refers to the lipid content that holds water in. These require different ingredient strategies. Dehydrated skin (low water content) feels tight, looks dull, and has fine surface lines — treat with humectants: hyaluronic acid, glycerin, beta-glucan, sodium hyaluronate. Dry skin (low lipid content) feels rough, may flake, and is prone to eczema — treat with emollients and occlusives: ceramides, cholesterol, fatty acids, shea butter, squalane. Many people have both simultaneously. A serum with hyaluronic acid followed by a ceramide-rich moisturiser addresses both effectively.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["hydration", "moisture", "hyaluronic acid", "ceramides", "dryness", "dehydration", "glycerin", "squalane"]
+  },
+  {
+    "id": "kb_exfoliation_001",
+    "category": "general",
+    "title": "Chemical Exfoliation: AHAs, BHAs, and PHAs",
+    "text": "Chemical exfoliation dissolves the bonds between dead skin cells without physical abrasion, making it safer than scrubs for most skin types. AHAs (alpha hydroxy acids) — glycolic, lactic, mandelic, malic — are water-soluble and work on the skin surface; effective for dullness, uneven texture, fine lines, and mild pigmentation; lactic acid is gentler and preferred for sensitive skin. BHAs (beta hydroxy acids) — salicylic acid — are lipid-soluble, penetrate into pores, and are the ingredient of choice for oily, acne-prone, and congested skin. PHAs (gluconolactone, lactobionic acid) are the gentlest option, with similar AHA benefits and added barrier-supportive humectant properties, ideal for dry or sensitive skin. Exfoliate 2–3 times per week maximum; always use SPF the following morning.",
+    "source": "SkinAura Knowledge Base",
+    "tags": ["exfoliation", "AHA", "BHA", "PHA", "glycolic acid", "lactic acid", "salicylic acid", "chemical exfoliation"]
+  }
+]
