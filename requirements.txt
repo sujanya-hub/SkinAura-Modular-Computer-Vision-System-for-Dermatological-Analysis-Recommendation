@@ -1,8 +1,5 @@
-fastapi
-uvicorn
-pydantic
-numpy
+streamlit
+requests
 pillow
-opencv-python
-tensorflow
-python-multipart
+numpy
+pandas
