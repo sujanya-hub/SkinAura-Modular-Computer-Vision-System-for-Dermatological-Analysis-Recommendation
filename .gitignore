@@ -16,7 +16,6 @@ datasets/
 .env
 
 # Models (optional if large)
-*.h5
 *.keras
 *.pt
 

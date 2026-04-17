@@ -32,8 +32,8 @@ st.set_page_config(
 # CONFIG
 # ---------------------------------------------------------------------------
 
-PREDICT_API_URL = "http://127.0.0.1:8000/api/v1/predict"
-HEALTH_API_URL = "http://127.0.0.1:8000/api/v1/health"
+PREDICT_API_URL = "https://skinaura-backend.onrender.com/api/v1/predict"
+HEALTH_API_URL = "https://skinaura-backend.onrender.com/api/v1/health"
 API_TIMEOUT_SECONDS = 60
 CLASS_LABELS = ["Acne", "Pigmentation", "Acne Scars", "Normal"]
 
