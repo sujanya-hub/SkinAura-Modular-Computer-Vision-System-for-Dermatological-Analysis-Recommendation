@@ -1,7 +1,15 @@
 """
-app_dashboard.py - SkinAura: AI Analysis Dashboard (v3.0)
+app_dashboard.py - SkinAura: AI Analysis Dashboard (v3.1)
 ==========================================================
-Premium dark-theme Streamlit dashboard — upgraded to match reference UI.
+Premium dark-theme Streamlit dashboard.
+
+Fixes in v3.1:
+  - build_routine() now returns consistent 3-tuples: (icon, name, description)
+  - validate_routine_step() / validate_routine() defensive helpers added
+  - Checkboxes for Main Concerns are now fully interactive via st.session_state
+  - build_json_report() is crash-safe
+  - Graceful fallbacks everywhere routine data is consumed
+  - Minor UI polish: spacing, icons, layout consistency
 
 Run with:
     streamlit run app_dashboard.py
@@ -36,6 +44,7 @@ PREDICT_API_URL = "https://skinaura-backend.onrender.com/api/v1/predict"
 HEALTH_API_URL  = "https://skinaura-backend.onrender.com/api/v1/health"
 API_TIMEOUT_SECONDS = 60
 CLASS_LABELS = ["Acne", "Pigmentation", "Acne Scars", "Normal"]
+CONCERN_OPTIONS = ["Acne", "Pigmentation", "Dark Spots", "Scars", "Uneven Tone"]
 
 # ---------------------------------------------------------------------------
 # CSS
@@ -154,11 +163,7 @@ code, pre { font-family: 'DM Mono', monospace !important; }
     color: #5A5A7A;
     margin-top: -2px;
 }
-.sa-nav {
-    display: flex;
-    gap: 2rem;
-    align-items: center;
-}
+.sa-nav { display: flex; gap: 2rem; align-items: center; }
 .sa-nav-item {
     font-family: 'Sora', sans-serif;
     font-size: 0.82rem;
@@ -246,28 +251,6 @@ code, pre { font-family: 'DM Mono', monospace !important; }
     color: #EF9999;
 }
 
-/* ── Tabs (custom) ── */
-.sa-tabs {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    margin: 1rem 0 1.2rem;
-    overflow-x: auto;
-}
-.sa-tab {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: #5A5A7A;
-    padding: 0.55rem 1.1rem;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    white-space: nowrap;
-    transition: all 0.2s;
-}
-.sa-tab:hover { color: #A855F7; }
-.sa-tab-active { color: #A855F7 !important; border-bottom-color: #A855F7 !important; font-weight: 600 !important; }
-
 /* ── Streamlit radio as tab-like ── */
 div[data-testid="stRadio"] > div {
     display: flex !important;
@@ -293,6 +276,41 @@ div[data-testid="stRadio"] > div > label:hover { color: #A855F7 !important; }
 div[data-testid="stRadio"] > div > label[data-baseweb="radio"] { display: none !important; }
 div[data-testid="stRadio"] label > div:first-child { display: none !important; }
 
+/* ── Streamlit checkbox — styled to match design ── */
+[data-testid="stCheckbox"] {
+    padding: 0.18rem 0 !important;
+}
+[data-testid="stCheckbox"] label {
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.78rem !important;
+    color: #8A8A9A !important;
+    gap: 0.5rem !important;
+    align-items: center !important;
+}
+[data-testid="stCheckbox"] label:hover {
+    color: #E0D8F0 !important;
+}
+[data-testid="stCheckbox"] svg {
+    stroke: #7C3AED !important;
+}
+/* Checkbox box itself */
+[data-testid="stCheckbox"] span[data-testid="stCheckboxCheckmark"] {
+    background-color: #7C3AED !important;
+    border-color: #7C3AED !important;
+    border-radius: 3px !important;
+}
+[data-baseweb="checkbox"] > div:first-child {
+    background-color: transparent !important;
+    border: 1.5px solid rgba(168,85,247,0.4) !important;
+    border-radius: 3px !important;
+    width: 14px !important;
+    height: 14px !important;
+}
+[data-baseweb="checkbox"][aria-checked="true"] > div:first-child {
+    background-color: #7C3AED !important;
+    border-color: #7C3AED !important;
+}
+
 /* ── Severity bar ── */
 .sa-sev-row { margin-bottom: 0.8rem; }
 .sa-sev-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
@@ -308,62 +326,25 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
 .sa-class-bar-fill { height: 100%; border-radius: 2px; }
 .sa-class-pct { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #5A5A6E; min-width: 32px; text-align: right; }
 
-/* ── Routine step ── */
-.sa-step {
+/* ── Routine product row ── */
+.sa-routine-product {
     display: flex;
     align-items: flex-start;
-    gap: 0.85rem;
-    padding: 0.8rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.045);
+    gap: 0.8rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
 }
-.sa-step:last-child { border-bottom: none; }
-.sa-step-badge {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.08em;
-    color: #A855F7;
-    background: rgba(168,85,247,0.1);
-    border: 1px solid rgba(168,85,247,0.25);
-    border-radius: 4px;
-    padding: 0.18rem 0.45rem;
-    margin-top: 0.08rem;
-    flex-shrink: 0;
-    min-width: 30px;
-    text-align: center;
-}
-.sa-step-title { font-family: 'Sora', sans-serif; font-size: 0.85rem; font-weight: 600; color: #E0D8F0; margin-bottom: 0.12rem; }
-.sa-step-desc { font-family: 'Sora', sans-serif; font-size: 0.75rem; color: #5A5A7A; line-height: 1.5; }
-
-/* ── Profile section ── */
-.sa-profile-section-title {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #8A8A9A;
-    margin: 0.75rem 0 0.4rem;
-}
-.sa-checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.3rem 0;
-    font-family: 'Sora', sans-serif;
-    font-size: 0.78rem;
-    color: #7A7A9A;
-}
-.sa-checkbox-active { color: #E0D8F0 !important; }
-.sa-checkbox-box {
-    width: 14px; height: 14px;
-    border: 1.5px solid rgba(168,85,247,0.4);
-    border-radius: 3px;
-    flex-shrink: 0;
-    background: transparent;
-}
-.sa-checkbox-checked {
-    background: #7C3AED !important;
-    border-color: #7C3AED !important;
+.sa-routine-product:last-child { border-bottom: none; }
+.sa-routine-product-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
 }
+.sa-routine-product-name { font-family: 'Sora', sans-serif; font-size: 0.8rem; font-weight: 600; color: #E0D8F0; }
+.sa-routine-product-desc { font-family: 'Sora', sans-serif; font-size: 0.7rem; color: #5A5A7A; margin-top: 0.08rem; line-height: 1.4; }
 
 /* ── Diet card ── */
 .sa-diet-card {
@@ -386,7 +367,7 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
     font-family: 'Sora', sans-serif;
     font-size: 0.73rem;
     color: #7A7A9A;
-    padding: 0.2rem 0;
+    padding: 0.22rem 0;
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -434,19 +415,8 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
     gap: 0.75rem;
     margin-top: 1rem;
 }
-.sa-banner-text {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #E9D5FF;
-    text-align: center;
-}
-.sa-banner-sub {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.72rem;
-    color: rgba(233,213,255,0.65);
-    text-align: center;
-}
+.sa-banner-text { font-family: 'Sora', sans-serif; font-size: 0.82rem; font-weight: 600; color: #E9D5FF; text-align: center; }
+.sa-banner-sub  { font-family: 'Sora', sans-serif; font-size: 0.72rem; color: rgba(233,213,255,0.65); text-align: center; }
 
 /* ── Image wrapper ── */
 .sa-image-wrapper {
@@ -455,22 +425,6 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
     border: 1px solid rgba(255,255,255,0.07);
     background: rgba(255,255,255,0.02);
 }
-
-/* ── Heatmap legend ── */
-.sa-heatmap-legend {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
-    position: absolute;
-    right: 10px; bottom: 40px;
-}
-.sa-legend-bar {
-    width: 10px; height: 80px;
-    border-radius: 5px;
-    background: linear-gradient(to top, #3B82F6, #22C55E, #EAB308, #EF4444);
-}
-.sa-legend-label { font-family: 'DM Mono', monospace; font-size: 0.55rem; color: #7A7A9A; }
 
 /* ── Insight box ── */
 .sa-insight-box {
@@ -482,7 +436,7 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
 .sa-insight-title { font-family: 'Sora', sans-serif; font-size: 0.82rem; font-weight: 600; color: #A855F7; margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.4rem; }
 .sa-insight-text { font-family: 'Sora', sans-serif; font-size: 0.78rem; color: #8A8A9A; line-height: 1.65; }
 
-/* ── Routine section header ── */
+/* ── Routine period header ── */
 .sa-routine-period {
     display: flex;
     align-items: center;
@@ -493,28 +447,39 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
     color: #E0D8F0;
     margin: 1rem 0 0.6rem;
 }
+.sa-routine-period:first-child { margin-top: 0; }
 
-/* ── Routine product row ── */
-.sa-routine-product {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.8rem;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.sa-routine-product:last-child { border-bottom: none; }
-.sa-routine-product-icon {
-    width: 38px; height: 38px;
-    background: rgba(255,255,255,0.05);
+/* ── Why routine box ── */
+.sa-why-box {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
     border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
 }
-.sa-routine-product-name { font-family: 'Sora', sans-serif; font-size: 0.8rem; font-weight: 600; color: #E0D8F0; }
-.sa-routine-product-desc { font-family: 'Sora', sans-serif; font-size: 0.7rem; color: #5A5A7A; margin-top: 0.08rem; }
+.sa-why-title { font-family: 'Sora', sans-serif; font-size: 0.78rem; font-weight: 600; color: #A855F7; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; }
+.sa-why-text { font-family: 'Sora', sans-serif; font-size: 0.73rem; color: #6A6A8A; line-height: 1.55; }
 
-/* ── Download button style fix ── */
+/* ── Tip / Avoid items ── */
+.sa-tip-item {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: 'Sora', sans-serif; font-size: 0.78rem; color: #8A8A9A; line-height: 1.5;
+}
+.sa-tip-item:last-child { border-bottom: none; }
+.sa-tip-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #A855F7; min-width: 18px; margin-top: 1px; }
+
+.sa-avoid-item {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: 'Sora', sans-serif; font-size: 0.78rem; color: #8A8A9A;
+}
+.sa-avoid-item:last-child { border-bottom: none; }
+.sa-avoid-x { color: #EF4444; font-weight: 700; margin-top: 1px; }
+
+/* ── Download button ── */
 .stDownloadButton > button {
     background: rgba(255,255,255,0.05) !important;
     color: #C0B8D0 !important;
@@ -542,10 +507,7 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
 
 /* ── Analysis summary header ── */
 .sa-summary-header {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem;
 }
 .sa-summary-icon {
     width: 38px; height: 38px;
@@ -557,46 +519,20 @@ div[data-testid="stRadio"] label > div:first-child { display: none !important; }
 .sa-summary-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: #E0D8F0; }
 .sa-summary-sub { font-family: 'Sora', sans-serif; font-size: 0.72rem; color: #5A5A7A; }
 
-/* ── Why routine box ── */
-.sa-why-box {
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    margin-top: 0.75rem;
-}
-.sa-why-title { font-family: 'Sora', sans-serif; font-size: 0.78rem; font-weight: 600; color: #A855F7; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; }
-.sa-why-text { font-family: 'Sora', sans-serif; font-size: 0.73rem; color: #6A6A8A; line-height: 1.55; }
-
-/* ── Tip item ── */
-.sa-tip-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+/* ── Profile section ── */
+.sa-profile-section-title {
     font-family: 'Sora', sans-serif;
     font-size: 0.78rem;
+    font-weight: 600;
     color: #8A8A9A;
-    line-height: 1.5;
+    margin: 0.85rem 0 0.3rem;
 }
-.sa-tip-item:last-child { border-bottom: none; }
-.sa-tip-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #A855F7; min-width: 18px; margin-top: 1px; }
-
-/* ── Avoid item ── */
-.sa-avoid-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
-    padding: 0.55rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+.sa-concerns-hint {
     font-family: 'Sora', sans-serif;
-    font-size: 0.78rem;
-    color: #8A8A9A;
+    font-size: 0.65rem;
+    color: #4A4A6A;
+    margin-bottom: 0.5rem;
 }
-.sa-avoid-item:last-child { border-bottom: none; }
-.sa-avoid-x { color: #EF4444; font-weight: 700; margin-top: 1px; }
-
 </style>
 """
 
@@ -636,14 +572,65 @@ def badge_cls(level: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# ROUTINE VALIDATION HELPERS
+# ---------------------------------------------------------------------------
+
+# A valid routine step is a 3-tuple: (icon: str, name: str, description: str)
+RoutineStep = tuple[str, str, str]
+
+FALLBACK_STEP: RoutineStep = ("🧴", "Skincare Step", "Apply as directed.")
+
+def validate_routine_step(step: Any) -> RoutineStep:
+    """
+    Coerce any value into a safe (icon, name, description) 3-tuple.
+    Handles: correct 3-tuples, legacy 2-tuples (name, desc), dicts, and garbage.
+    """
+    if isinstance(step, (list, tuple)):
+        if len(step) == 3:
+            return (str(step[0]) or "🧴", str(step[1]) or "Step", str(step[2]) or "")
+        if len(step) == 2:
+            # Legacy 2-tuple: (name, description) — inject a default icon
+            return ("🧴", str(step[0]) or "Step", str(step[1]) or "")
+        if len(step) == 1:
+            return ("🧴", str(step[0]) or "Step", "")
+    if isinstance(step, dict):
+        return (
+            str(step.get("icon", "🧴")),
+            str(step.get("name", "Step")),
+            str(step.get("description", "")),
+        )
+    return FALLBACK_STEP
+
+
+def validate_routine(routine: Any) -> dict[str, list[RoutineStep]]:
+    """
+    Ensure the full routine dict is safe: {period: [RoutineStep, ...]}
+    Returns an empty-safe dict even if input is None or malformed.
+    """
+    if not isinstance(routine, dict):
+        return {}
+    result: dict[str, list[RoutineStep]] = {}
+    for period, steps in routine.items():
+        if not isinstance(steps, (list, tuple)):
+            result[str(period)] = []
+            continue
+        result[str(period)] = [validate_routine_step(s) for s in steps]
+    return result
+
+
+# ---------------------------------------------------------------------------
 # DATA / LOGIC
 # ---------------------------------------------------------------------------
 
 def call_predict_api(image_bytes: bytes, filename: str) -> dict[str, Any]:
-    ext   = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
-    mime  = "image/png" if ext == "png" else "image/jpeg"
+    ext  = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
+    mime = "image/png" if ext == "png" else "image/jpeg"
     try:
-        r = requests.post(PREDICT_API_URL, files={"image": (filename, image_bytes, mime)}, timeout=API_TIMEOUT_SECONDS)
+        r = requests.post(
+            PREDICT_API_URL,
+            files={"image": (filename, image_bytes, mime)},
+            timeout=API_TIMEOUT_SECONDS,
+        )
         r.raise_for_status()
     except requests.Timeout:
         return {"success": False, "error": "Request timed out."}
@@ -651,8 +638,10 @@ def call_predict_api(image_bytes: bytes, filename: str) -> dict[str, Any]:
         return {"success": False, "error": "API not reachable"}
     except requests.HTTPError as exc:
         detail = None
-        try: detail = r.json().get("detail")
-        except: pass
+        try:
+            detail = r.json().get("detail")
+        except Exception:
+            pass
         return {"success": False, "error": f"HTTP error: {detail or exc}"}
     except requests.RequestException as exc:
         return {"success": False, "error": str(exc)}
@@ -672,7 +661,14 @@ def call_predict_api(image_bytes: bytes, filename: str) -> dict[str, Any]:
     except (TypeError, ValueError):
         return {"success": False, "error": "Invalid confidence score."}
 
-    return {"success": True, "data": {"prediction": normalize(pred), "confidence": conf_val, "recommendation": rec.strip()}}
+    return {
+        "success": True,
+        "data": {
+            "prediction":     normalize(pred),
+            "confidence":     conf_val,
+            "recommendation": rec.strip(),
+        },
+    }
 
 
 def fetch_system_status() -> dict[str, bool]:
@@ -680,10 +676,13 @@ def fetch_system_status() -> dict[str, bool]:
         r = requests.get(HEALTH_API_URL, timeout=3)
         r.raise_for_status()
         p = r.json()
-    except:
+    except Exception:
         return {"model": False, "api": False}
     services = p.get("services", {}) if isinstance(p, dict) else {}
-    return {"model": services.get("model_loader") == "loaded", "api": p.get("status") in {"ok", "degraded"}}
+    return {
+        "model": services.get("model_loader") == "loaded",
+        "api":   p.get("status") in {"ok", "degraded"},
+    }
 
 
 def simulate_class_probs(prediction: str, confidence: float) -> dict[str, float]:
@@ -699,14 +698,18 @@ def simulate_class_probs(prediction: str, confidence: float) -> dict[str, float]
     profile = profiles.get(primary, {})
     others  = [l for l in CLASS_LABELS if l != primary]
     total_w = sum(profile.get(l, 1.0) for l in others) or 1.0
-    probs   = {primary: top}
+    probs: dict[str, float] = {primary: top}
     for l in others:
         probs[l] = rem * profile.get(l, 1.0) / total_w
     total = sum(probs.values()) or 1.0
     return dict(sorted({k: v / total for k, v in probs.items()}.items(), key=lambda x: x[1], reverse=True))
 
 
-def build_severity(prediction: str, confidence: float, class_probs: dict[str, float]) -> dict[str, tuple[str, str, float]]:
+def build_severity(
+    prediction: str,
+    confidence: float,
+    class_probs: dict[str, float],
+) -> dict[str, tuple[str, str, float]]:
     sec_prob = list(class_probs.values())[1] if len(class_probs) > 1 else 0.1
     base = {
         "Acne":        {"Inflammation": 0.55, "Coverage": 0.48, "Scarring Risk": 0.42, "Pigmentation": 0.22},
@@ -715,7 +718,7 @@ def build_severity(prediction: str, confidence: float, class_probs: dict[str, fl
         "Normal":      {"Inflammation": 0.08, "Coverage": 0.12, "Scarring Risk": 0.10, "Pigmentation": 0.10},
     }
     profile = base.get(normalize(prediction), base["Normal"])
-    result  = {}
+    result: dict[str, tuple[str, str, float]] = {}
     for metric, bv in profile.items():
         val = clamp(bv + confidence * 0.35 + sec_prob * 0.10, 0.05, 0.95)
         level, color = sev_color(val)
@@ -723,13 +726,18 @@ def build_severity(prediction: str, confidence: float, class_probs: dict[str, fl
     return result
 
 
-def build_ai_insight(prediction: str, confidence: float, secondary_label: str, secondary_prob: float) -> str:
+def build_ai_insight(
+    prediction: str,
+    confidence: float,
+    secondary_label: str,
+    secondary_prob: float,
+) -> str:
     primary = normalize(prediction)
     msgs = {
-        "Acne":        "Detected clustered inflammation and pore congestion patterns consistent with active acne activity, especially across oil-prone facial regions. Early intervention can prevent scarring and post-inflammatory hyperpigmentation.",
-        "Pigmentation":"Detected uneven melanin distribution and tonal variation suggestive of pigmentation irregularity rather than active inflammatory lesions.",
-        "Acne Scars":  "Detected residual textural irregularity and post-inflammatory markings consistent with acne scar formation and healing changes.",
-        "Normal":      "Detected balanced skin texture without a dominant lesion pattern, with overall features aligning to normal skin presentation.",
+        "Acne":         "Detected clustered inflammation and pore congestion patterns consistent with active acne activity, especially across oil-prone facial regions. Early intervention can prevent scarring and post-inflammatory hyperpigmentation.",
+        "Pigmentation": "Detected uneven melanin distribution and tonal variation suggestive of pigmentation irregularity rather than active inflammatory lesions.",
+        "Acne Scars":   "Detected residual textural irregularity and post-inflammatory markings consistent with acne scar formation and healing changes.",
+        "Normal":       "Detected balanced skin texture without a dominant lesion pattern, with overall features aligning to normal skin presentation.",
     }
     certainty = "strong" if confidence >= 0.8 else "moderate"
     sec_text  = ""
@@ -738,89 +746,100 @@ def build_ai_insight(prediction: str, confidence: float, secondary_label: str, s
     return f"{msgs.get(primary, msgs['Normal'])} Model confidence is {confidence:.0%} — a {certainty} match.{sec_text}"
 
 
-def build_routine(prediction: str) -> dict[str, list[tuple[str, str, str]]]:
-    routines = {
+# ---------------------------------------------------------------------------
+# BUILD ROUTINE  ← THE PRIMARY FIX
+# All steps are 3-tuples: (emoji_icon, product_name, description)
+# ---------------------------------------------------------------------------
+
+def build_routine(prediction: str) -> dict[str, list[RoutineStep]]:
+    routines: dict[str, dict[str, list[RoutineStep]]] = {
         "Acne": {
             "Morning": [
-                ( "Salicylic Acid Cleanser", "Unclogs pores and removes excess oil"),
-                ( "Niacinamide Serum",        "Controls oil production and reduces redness"),
-                ( "Lightweight Moisturiser",  "Hydrates without clogging pores"),
-                ( "Sunscreen SPF 50",          "Protects from UV rays and prevents marks"),
+                ("🧴", "Salicylic Acid Cleanser",   "Unclogs pores and removes excess oil"),
+                ("💧", "Niacinamide Serum",          "Controls oil production and reduces redness"),
+                ("🤍", "Lightweight Moisturiser",    "Hydrates without clogging pores"),
+                ("☀️", "Sunscreen SPF 50",           "Protects from UV rays and prevents marks"),
             ],
             "Night": [
-                ( "Gentle Cleanser",          "Removes dirt, oil and impurities"),
-                ( "Adapalene (Spot Treatment)","Reduces active acne and prevents breakouts"),
-                ( "Oil-free Moisturiser",     "Repairs skin barrier and locks in hydration"),
+                ("🌿", "Gentle Cleanser",            "Removes dirt, oil and impurities"),
+                ("🎯", "Adapalene Spot Treatment",   "Reduces active acne and prevents breakouts"),
+                ("🤍", "Oil-free Moisturiser",       "Repairs skin barrier and locks in hydration"),
             ],
         },
         "Pigmentation": {
             "Morning": [
-                ( "Brightening Cleanser",     "Gentle cleanse that doesn't trigger irritation"),
-                ( "Vitamin C Serum",           "Antioxidant that targets uneven tone and dullness"),
-                ( "Lightweight Moisturiser",  "Hydrates without clogging pores"),
-                ( "Sunscreen SPF 50",          "Prevents pigmentation from deepening"),
+                ("🧴", "Brightening Cleanser",       "Gentle cleanse that doesn't trigger irritation"),
+                ("✨", "Vitamin C Serum",             "Antioxidant that targets uneven tone and dullness"),
+                ("🤍", "Lightweight Moisturiser",    "Hydrates without clogging pores"),
+                ("☀️", "Sunscreen SPF 50",           "Prevents pigmentation from deepening"),
             ],
             "Night": [
-                ( "Hydrating Cleanser",       "Gentle foaming cleanse before actives"),
-                ( "Tranexamic Acid Serum",     "Targets melanin production and dark spots"),
-                ( "Barrier Moisturiser",       "Ceramide-rich hydration to reduce irritation"),
+                ("🌿", "Hydrating Cleanser",         "Gentle foaming cleanse before actives"),
+                ("💫", "Tranexamic Acid Serum",      "Targets melanin production and dark spots"),
+                ("🤍", "Barrier Moisturiser",        "Ceramide-rich hydration to reduce irritation"),
             ],
         },
         "Acne Scars": {
             "Morning": [
-                ( "Gentle Cleanser",           "Low-stripping cleanse to protect healing skin"),
-                ( "Peptide Repair Serum",       "Supports smoother-looking skin texture"),
-                ( "Lightweight Moisturiser",   "Hydrates and supports skin recovery"),
-                ( "Sunscreen SPF 50",           "Prevents scar marks from appearing darker"),
+                ("🧴", "Gentle Cleanser",            "Low-stripping cleanse to protect healing skin"),
+                ("🔬", "Peptide Repair Serum",       "Supports smoother-looking skin texture"),
+                ("🤍", "Lightweight Moisturiser",    "Hydrates and supports skin recovery"),
+                ("☀️", "Sunscreen SPF 50",           "Prevents scar marks from appearing darker"),
             ],
             "Night": [
-                ( "Hydrating Toner",            "Adds comfort before reparative actives"),
-                ( "Retinoid Treatment",          "Retinoid-based renewal to improve scar appearance"),
-                ( "Barrier Moisturiser",         "Minimises irritation and supports recovery"),
+                ("💦", "Hydrating Toner",            "Adds comfort before reparative actives"),
+                ("🌙", "Retinoid Treatment",         "Retinoid-based renewal to improve scar appearance"),
+                ("🤍", "Barrier Moisturiser",        "Minimises irritation and supports recovery"),
             ],
         },
         "Normal": {
             "Morning": [
-                ( "Gentle Cleanser",           "Removes overnight buildup, maintains barrier"),
-                ( "Antioxidant Serum",          "Vitamin C for preventive daily care"),
-                ( "Lightweight Moisturiser",   "Keeps skin smooth and balanced"),
-                ( "Sunscreen SPF 50",           "Protects against UV damage"),
+                ("🧴", "Gentle Cleanser",            "Removes overnight buildup, maintains barrier"),
+                ("✨", "Antioxidant Serum",          "Vitamin C for preventive daily care"),
+                ("🤍", "Lightweight Moisturiser",    "Keeps skin smooth and balanced"),
+                ("☀️", "Sunscreen SPF 50",           "Protects against UV damage"),
             ],
             "Night": [
-                ( "Micellar Cleanse",           "Lifts sunscreen and impurities gently"),
-                ( "Hyaluronic Acid Serum",      "Maintains smoothness and water balance"),
-                ( "Barrier Moisturiser",         "Keeps skin calm, balanced, and resilient"),
+                ("🌿", "Micellar Cleanse",           "Lifts sunscreen and impurities gently"),
+                ("💧", "Hyaluronic Acid Serum",      "Maintains smoothness and water balance"),
+                ("🤍", "Barrier Moisturiser",        "Keeps skin calm, balanced, and resilient"),
             ],
         },
     }
-    return routines.get(normalize(prediction), routines["Normal"])
+    raw = routines.get(normalize(prediction), routines["Normal"])
+    # Always pass through validator to guarantee safe 3-tuples
+    return validate_routine(raw)
 
+
+# ---------------------------------------------------------------------------
+# REMAINING DATA BUILDERS (unchanged logic, safe)
+# ---------------------------------------------------------------------------
 
 def build_diet(prediction: str) -> dict[str, Any]:
     data = {
         "Acne": {
-            "eat": ["Fruits (Berries, Apple, Papaya)", "Leafy Greens", "Nuts & Seeds", "Omega-3 Rich Foods", "Green Tea"],
-            "avoid": ["Sugar & Refined Carbs", "Dairy (Milk, Cheese)", "Fried & Oily Foods", "High Glycemic Foods", "Excess Salt"],
+            "eat":       ["Fruits (Berries, Apple, Papaya)", "Leafy Greens", "Nuts & Seeds", "Omega-3 Rich Foods", "Green Tea"],
+            "avoid":     ["Sugar & Refined Carbs", "Dairy (Milk, Cheese)", "Fried & Oily Foods", "High Glycemic Foods", "Excess Salt"],
             "lifestyle": ["Sleep 7-8 hours", "Manage Stress", "Exercise Regularly", "Keep pillowcases clean", "Don't touch your face"],
-            "hydration": "Drink 2-3L\nwater daily",
+            "hydration": "Drink 2–3L\nwater daily",
         },
         "Pigmentation": {
-            "eat": ["Vitamin C rich foods", "Tomatoes & Carrots", "Dark Leafy Greens", "Flaxseeds & Walnuts", "Green Tea"],
-            "avoid": ["Processed foods", "Alcohol", "Excess caffeine", "High sugar foods", "Smoking"],
+            "eat":       ["Vitamin C rich foods", "Tomatoes & Carrots", "Dark Leafy Greens", "Flaxseeds & Walnuts", "Green Tea"],
+            "avoid":     ["Processed foods", "Alcohol", "Excess caffeine", "High sugar foods", "Smoking"],
             "lifestyle": ["Sleep 7-8 hours", "Wear SPF daily", "Stay hydrated", "Manage stress", "Avoid midday sun"],
-            "hydration": "Drink 2-3L\nwater daily",
+            "hydration": "Drink 2–3L\nwater daily",
         },
         "Acne Scars": {
-            "eat": ["Vitamin E foods (nuts, seeds)", "Collagen-rich broth", "Berries & antioxidants", "Zinc-rich foods", "Leafy greens"],
-            "avoid": ["High sugar foods", "Processed snacks", "Excess dairy", "Fried foods", "Alcohol"],
+            "eat":       ["Vitamin E foods (nuts, seeds)", "Collagen-rich broth", "Berries & antioxidants", "Zinc-rich foods", "Leafy greens"],
+            "avoid":     ["High sugar foods", "Processed snacks", "Excess dairy", "Fried foods", "Alcohol"],
             "lifestyle": ["Sleep 8 hours", "Gentle exercise", "Avoid picking skin", "Manage stress", "Consistent routine"],
-            "hydration": "Drink 2-3L\nwater daily",
+            "hydration": "Drink 2–3L\nwater daily",
         },
         "Normal": {
-            "eat": ["Varied whole foods", "Fruits & Vegetables", "Lean proteins", "Healthy fats", "Plenty of water"],
-            "avoid": ["Highly processed foods", "Excess sugar", "Alcohol", "Trans fats", "Excess caffeine"],
+            "eat":       ["Varied whole foods", "Fruits & Vegetables", "Lean proteins", "Healthy fats", "Plenty of water"],
+            "avoid":     ["Highly processed foods", "Excess sugar", "Alcohol", "Trans fats", "Excess caffeine"],
             "lifestyle": ["Sleep 7-8 hours", "Regular exercise", "Stress management", "Consistent skincare", "Annual skin check"],
-            "hydration": "Drink 2-3L\nwater daily",
+            "hydration": "Drink 2–3L\nwater daily",
         },
     }
     return data.get(normalize(prediction), data["Normal"])
@@ -829,28 +848,28 @@ def build_diet(prediction: str) -> dict[str, Any]:
 def build_products(prediction: str) -> list[dict]:
     products = {
         "Acne": [
-            {"icon": "🧴", "name": "Minimalist Salicylic Acid Cleanser", "type": "Cleanser", "price": "₹349"},
-            {"icon": "💧", "name": "The Derma Co Niacinamide Serum",    "type": "Serum",    "price": "₹499"},
-            {"icon": "☀️", "name": "La Shield SPF 50 Gel",              "type": "Sunscreen","price": "₹699"},
-            {"icon": "🤍", "name": "Cetaphil Oil Free Moisturizer",     "type": "Moisturiser","price": "₹549"},
+            {"icon": "🧴", "name": "Minimalist Salicylic Acid Cleanser", "type": "Cleanser",    "price": "₹349"},
+            {"icon": "💧", "name": "The Derma Co Niacinamide Serum",     "type": "Serum",       "price": "₹499"},
+            {"icon": "☀️", "name": "La Shield SPF 50 Gel",              "type": "Sunscreen",   "price": "₹699"},
+            {"icon": "🤍", "name": "Cetaphil Oil Free Moisturizer",      "type": "Moisturiser", "price": "₹549"},
         ],
         "Pigmentation": [
-            {"icon": "✨", "name": "Minimalist Vitamin C 10%",          "type": "Serum",     "price": "₹399"},
-            {"icon": "💫", "name": "The Ordinary Tranexamic Acid",      "type": "Treatment", "price": "₹599"},
-            {"icon": "☀️", "name": "Re'equil Mineral Sunscreen SPF50", "type": "Sunscreen", "price": "₹449"},
-            {"icon": "🤍", "name": "Neutrogena Hydro Boost",           "type": "Moisturiser","price": "₹749"},
+            {"icon": "✨", "name": "Minimalist Vitamin C 10%",           "type": "Serum",       "price": "₹399"},
+            {"icon": "💫", "name": "The Ordinary Tranexamic Acid",       "type": "Treatment",   "price": "₹599"},
+            {"icon": "☀️", "name": "Re'equil Mineral Sunscreen SPF50",  "type": "Sunscreen",   "price": "₹449"},
+            {"icon": "🤍", "name": "Neutrogena Hydro Boost",            "type": "Moisturiser", "price": "₹749"},
         ],
         "Acne Scars": [
-            {"icon": "🌙", "name": "Minimalist Retinol 0.3%",          "type": "Treatment", "price": "₹549"},
-            {"icon": "💫", "name": "The Ordinary Peptide Complex",     "type": "Serum",     "price": "₹899"},
-            {"icon": "☀️", "name": "Neutrogena Ultra Sheer SPF50",    "type": "Sunscreen", "price": "₹499"},
-            {"icon": "🤍", "name": "CeraVe Moisturising Cream",       "type": "Moisturiser","price": "₹799"},
+            {"icon": "🌙", "name": "Minimalist Retinol 0.3%",           "type": "Treatment",   "price": "₹549"},
+            {"icon": "💫", "name": "The Ordinary Peptide Complex",      "type": "Serum",       "price": "₹899"},
+            {"icon": "☀️", "name": "Neutrogena Ultra Sheer SPF50",     "type": "Sunscreen",   "price": "₹499"},
+            {"icon": "🤍", "name": "CeraVe Moisturising Cream",        "type": "Moisturiser", "price": "₹799"},
         ],
         "Normal": [
-            {"icon": "✨", "name": "Minimalist Vitamin C 10%",         "type": "Serum",     "price": "₹399"},
-            {"icon": "☀️", "name": "La Shield SPF 50 Gel",            "type": "Sunscreen", "price": "₹699"},
-            {"icon": "🤍", "name": "Cetaphil Moisturising Lotion",    "type": "Moisturiser","price": "₹449"},
-            {"icon": "🧼", "name": "CeraVe Hydrating Cleanser",       "type": "Cleanser",  "price": "₹649"},
+            {"icon": "✨", "name": "Minimalist Vitamin C 10%",          "type": "Serum",       "price": "₹399"},
+            {"icon": "☀️", "name": "La Shield SPF 50 Gel",             "type": "Sunscreen",   "price": "₹699"},
+            {"icon": "🤍", "name": "Cetaphil Moisturising Lotion",     "type": "Moisturiser", "price": "₹449"},
+            {"icon": "🧼", "name": "CeraVe Hydrating Cleanser",        "type": "Cleanser",    "price": "₹649"},
         ],
     }
     return products.get(normalize(prediction), products["Normal"])
@@ -904,31 +923,42 @@ def build_tips(prediction: str) -> list[str]:
     return tips.get(normalize(prediction), tips["Normal"])
 
 
+# ---------------------------------------------------------------------------
+# VIEW MODEL BUILDER
+# ---------------------------------------------------------------------------
+
 def build_view_model(api_data: dict[str, Any]) -> dict[str, Any]:
-    pred       = normalize(str(api_data["prediction"]))
-    conf       = clamp(float(api_data["confidence"]), 0.0, 1.0)
-    rec        = str(api_data["recommendation"]).strip()
+    pred  = normalize(str(api_data["prediction"]))
+    conf  = clamp(float(api_data["confidence"]), 0.0, 1.0)
+    rec   = str(api_data["recommendation"]).strip()
+
     class_probs = simulate_class_probs(pred, conf)
-    items      = list(class_probs.items())
-    primary    = items[0]
-    secondary  = items[1] if len(items) > 1 else items[0]
+    items       = list(class_probs.items())
+    primary     = items[0]
+    secondary   = items[1] if len(items) > 1 else items[0]
+    routine     = build_routine(pred)   # already validated (safe 3-tuples)
+
     return {
-        "prediction":  primary[0],
-        "confidence":  primary[1],
+        "prediction":     primary[0],
+        "confidence":     primary[1],
         "recommendation": rec,
-        "class_probs": class_probs,
-        "primary":     primary,
-        "secondary":   secondary,
-        "severity":    build_severity(pred, conf, class_probs),
-        "ai_insight":  build_ai_insight(pred, conf, secondary[0], secondary[1]),
-        "routine":     build_routine(pred),
-        "diet":        build_diet(pred),
-        "products":    build_products(pred),
-        "avoid":       build_avoid(pred),
-        "tips":        build_tips(pred),
-        "raw":         api_data,
+        "class_probs":    class_probs,
+        "primary":        primary,
+        "secondary":      secondary,
+        "severity":       build_severity(pred, conf, class_probs),
+        "ai_insight":     build_ai_insight(pred, conf, secondary[0], secondary[1]),
+        "routine":        routine,
+        "diet":           build_diet(pred),
+        "products":       build_products(pred),
+        "avoid":          build_avoid(pred),
+        "tips":           build_tips(pred),
+        "raw":            api_data,
     }
 
+
+# ---------------------------------------------------------------------------
+# REPORT BUILDERS  (crash-safe)
+# ---------------------------------------------------------------------------
 
 def build_text_report(r: dict[str, Any]) -> str:
     lines = [
@@ -959,30 +989,44 @@ def build_text_report(r: dict[str, Any]) -> str:
 
 
 def build_json_report(r: dict[str, Any]) -> str:
+    """Crash-safe JSON export. Validates routine before serialising."""
+    safe_routine = validate_routine(r.get("routine", {}))
+
+    routine_export: dict[str, list[dict]] = {}
+    for period, steps in safe_routine.items():
+        routine_export[period] = [
+            {"icon": ic, "name": n, "description": d}
+            for ic, n, d in steps      # guaranteed 3-tuple by validate_routine
+        ]
+
     payload = {
-        "prediction": r["prediction"],
-        "confidence": r["confidence"],
-        "recommendation": r["recommendation"],
+        "prediction":           r["prediction"],
+        "confidence":           r["confidence"],
+        "recommendation":       r["recommendation"],
         "primary":   {"label": r["primary"][0],   "probability": r["primary"][1]},
         "secondary": {"label": r["secondary"][0],  "probability": r["secondary"][1]},
-        "class_probabilities": r["class_probs"],
-        "severity": {k: {"level": lv, "probability": pb} for k, (lv, _, pb) in r["severity"].items()},
-        "ai_insight": r["ai_insight"],
-        "routine": {
-            period: [{"icon": ic, "name": n, "description": d} for ic, n, d in steps]
-            for period, steps in r["routine"].items()
+        "class_probabilities":  r["class_probs"],
+        "severity": {
+            k: {"level": lv, "probability": pb}
+            for k, (lv, _, pb) in r["severity"].items()
         },
-        "diet": r["diet"],
-        "products": r["products"],
-        "avoid": r["avoid"],
-        "tips": r["tips"],
+        "ai_insight":  r["ai_insight"],
+        "routine":     routine_export,
+        "diet":        r["diet"],
+        "products":    r["products"],
+        "avoid":       r["avoid"],
+        "tips":        r["tips"],
     }
-    return json.dumps(payload, indent=2)
+    return json.dumps(payload, indent=2, ensure_ascii=False)
 
+
+# ---------------------------------------------------------------------------
+# IMAGE READER
+# ---------------------------------------------------------------------------
 
 def read_image(uploaded_file: Any) -> tuple[Image.Image | None, bytes | None]:
     try:
-        b = uploaded_file.read()
+        b   = uploaded_file.read()
         img = Image.open(io.BytesIO(b)).convert("RGB")
         return img, b
     except (UnidentifiedImageError, OSError):
@@ -994,16 +1038,21 @@ def read_image(uploaded_file: Any) -> tuple[Image.Image | None, bytes | None]:
 # ---------------------------------------------------------------------------
 
 DEFAULTS: dict[str, Any] = {
-    "uploaded_image": None,
+    "uploaded_image":       None,
     "uploaded_image_bytes": None,
-    "uploaded_filename": "",
-    "analysis_result": None,
-    "analysed": False,
-    "api_error": "",
-    "active_tab": "Analysis",
-    "show_heatmap": False,
-    "skin_type": "Oily",
-    "concerns": ["Acne", "Pigmentation"],
+    "uploaded_filename":    "",
+    "analysis_result":      None,
+    "analysed":             False,
+    "api_error":            "",
+    "active_tab":           "Analysis",
+    "show_heatmap":         False,
+    "skin_type":            "Oily",
+    # Concern toggles — one key per concern for proper Streamlit reactivity
+    "concern_Acne":         True,
+    "concern_Pigmentation": True,
+    "concern_Dark Spots":   False,
+    "concern_Scars":        False,
+    "concern_Uneven Tone":  False,
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -1052,23 +1101,26 @@ with col_left:
     # ── 1. Upload Image ──────────────────────────────────────────────
     st.markdown(
         '<div style="font-family:\'Sora\',sans-serif;font-size:0.85rem;font-weight:600;'
-        'color:#E0D8F0;margin-bottom:0.5rem;">1. Upload Image &nbsp;<span style=\'font-size:0.7rem;color:#5A5A7A;\'>ⓘ</span></div>',
+        'color:#E0D8F0;margin-bottom:0.5rem;">1. Upload Image'
+        '&nbsp;<span style="font-size:0.7rem;color:#5A5A7A;">ⓘ</span></div>',
         unsafe_allow_html=True,
     )
 
     uploaded = st.file_uploader(
-        "Upload face photo", type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed", key="face_upload",
+        "Upload face photo",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="face_upload",
     )
     if uploaded is not None:
         img, imgb = read_image(uploaded)
         if img is None:
             st.error("Not a valid image.")
         else:
-            st.session_state["uploaded_image"] = img
+            st.session_state["uploaded_image"]       = img
             st.session_state["uploaded_image_bytes"] = imgb
-            st.session_state["uploaded_filename"] = uploaded.name
-            st.session_state["api_error"] = ""
+            st.session_state["uploaded_filename"]    = uploaded.name
+            st.session_state["api_error"]            = ""
 
     cur_img  = st.session_state["uploaded_image"]
     cur_fn   = st.session_state["uploaded_filename"]
@@ -1090,10 +1142,10 @@ with col_left:
     col_a, col_b = st.columns(2)
     with col_a:
         if st.button("✦  Analyse", disabled=(cur_imgb is None), use_container_width=True, key="analyse_btn"):
-            pb = st.progress(0)
+            pb     = st.progress(0)
             st_txt = st.empty()
             try:
-                st_txt.caption("Uploading…"); pb.progress(15); time.sleep(0.1)
+                st_txt.caption("Uploading…");        pb.progress(15); time.sleep(0.1)
                 st_txt.caption("Running inference…"); pb.progress(45)
                 api_res = call_predict_api(cur_imgb, cur_fn)
                 if not api_res["success"]:
@@ -1104,9 +1156,9 @@ with col_left:
                 else:
                     st_txt.caption("Building insights…"); pb.progress(82); time.sleep(0.1)
                     st.session_state["analysis_result"] = build_view_model(api_res["data"])
-                    st.session_state["analysed"] = True
-                    st.session_state["api_error"] = ""
-                    st.session_state["active_tab"] = "Analysis"
+                    st.session_state["analysed"]        = True
+                    st.session_state["api_error"]       = ""
+                    st.session_state["active_tab"]      = "Analysis"
                     system_status = {"model": True, "api": True}
                     pb.progress(100); time.sleep(0.1)
             finally:
@@ -1114,7 +1166,7 @@ with col_left:
 
     with col_b:
         if st.button("↺ Re-analyse", disabled=(cur_imgb is None), use_container_width=True, key="reanalyse_btn"):
-            st.session_state["analysed"] = False
+            st.session_state["analysed"]        = False
             st.session_state["analysis_result"] = None
             st.rerun()
 
@@ -1123,34 +1175,42 @@ with col_left:
     # ── 2. Profile ────────────────────────────────────────────────────
     st.markdown(
         '<div style="font-family:\'Sora\',sans-serif;font-size:0.85rem;font-weight:600;'
-        'color:#E0D8F0;margin-bottom:0.5rem;">2. Your Profile &nbsp;<span style=\'font-size:0.7rem;color:#5A5A7A;\'>ⓘ</span></div>',
+        'color:#E0D8F0;margin-bottom:0.5rem;">2. Your Profile'
+        '&nbsp;<span style="font-size:0.7rem;color:#5A5A7A;">ⓘ</span></div>',
         unsafe_allow_html=True,
     )
 
     card_open()
     sa_label("Skin Type")
+    skin_options = ["Oily", "Dry", "Combination", "Normal", "Sensitive"]
     st.session_state["skin_type"] = st.selectbox(
-        "skin_type", ["Oily", "Dry", "Combination", "Normal", "Sensitive"],
-        index=["Oily", "Dry", "Combination", "Normal", "Sensitive"].index(st.session_state["skin_type"]),
-        label_visibility="collapsed", key="skin_type_sel",
+        "skin_type",
+        skin_options,
+        index=skin_options.index(st.session_state["skin_type"]),
+        label_visibility="collapsed",
+        key="skin_type_sel",
     )
 
-    st.markdown('<div class="sa-profile-section-title">Main Concerns <span style="font-size:0.65rem;color:#4A4A6A;">(select all that apply)</span></div>', unsafe_allow_html=True)
-    concern_options = ["Acne", "Pigmentation", "Dark Spots", "Scars", "Uneven Tone"]
-    selected = st.session_state["concerns"]
-    for c in concern_options:
-        checked = c in selected
-        box_cls = "sa-checkbox-box sa-checkbox-checked" if checked else "sa-checkbox-box"
-        label_cls = "sa-checkbox-item sa-checkbox-active" if checked else "sa-checkbox-item"
-        check_mark = '<span style="color:#fff;font-size:0.55rem;">✓</span>' if checked else ''
-        st.markdown(
-            f'<div class="{label_cls}"><div class="{box_cls}">{check_mark}</div>{c}</div>',
-            unsafe_allow_html=True,
+    # ── Main Concerns — real interactive Streamlit checkboxes ──
+    st.markdown(
+        '<div class="sa-profile-section-title">Main Concerns</div>'
+        '<div class="sa-concerns-hint">Select all that apply</div>',
+        unsafe_allow_html=True,
+    )
+
+    for concern in CONCERN_OPTIONS:
+        key = f"concern_{concern}"
+        st.checkbox(
+            concern,
+            value=st.session_state[key],
+            key=key,
         )
 
     sa_divider()
     if st.button("✦  Update & Personalise", use_container_width=True, key="update_profile"):
-        pass  # Profile updates hook
+        # Collect selected concerns for use elsewhere
+        selected = [c for c in CONCERN_OPTIONS if st.session_state.get(f"concern_{c}", False)]
+        st.session_state["concerns"] = selected
 
     card_close()
 
@@ -1160,7 +1220,7 @@ with col_left:
     card_open()
     sa_label("System Status")
     for label_name, ok in [("Model", system_status["model"]), ("API", system_status["api"])]:
-        dot = "sa-dot-green" if ok else "sa-dot-red"
+        dot         = "sa-dot-green" if ok else "sa-dot-red"
         status_text = ("Loaded" if label_name == "Model" else "Connected") if ok else "Offline"
         st.markdown(
             f'<div class="sa-status-row"><div class="sa-dot {dot}"></div>'
@@ -1172,8 +1232,8 @@ with col_left:
     st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
 
     # ── Export ────────────────────────────────────────────────────────
-    cur_res = st.session_state["analysis_result"]
-    exp_on  = cur_res is not None
+    cur_res  = st.session_state["analysis_result"]
+    exp_on   = cur_res is not None
     txt_rep  = build_text_report(cur_res) if exp_on else "No analysis yet."
     json_rep = build_json_report(cur_res) if exp_on else json.dumps({"message": "No analysis yet."})
 
@@ -1210,19 +1270,22 @@ with col_center:
         card_close()
         st.stop()
 
-    prediction  = result["prediction"]
-    confidence  = result["confidence"]
+    # Always validate routine before rendering to prevent any unpacking crash
+    result["routine"] = validate_routine(result.get("routine", {}))
+
+    prediction     = result["prediction"]
+    confidence     = result["confidence"]
     recommendation = result["recommendation"]
-    class_probs = result["class_probs"]
-    severity    = result["severity"]
-    ai_insight  = result["ai_insight"]
-    primary     = result["primary"]
-    secondary   = result["secondary"]
+    class_probs    = result["class_probs"]
+    severity       = result["severity"]
+    ai_insight     = result["ai_insight"]
+    primary        = result["primary"]
+    secondary      = result["secondary"]
 
     # ── AI Summary Header ─────────────────────────────────────────────
     st.markdown(
         """<div class="sa-summary-header">
-             <div class="sa-summary-icon"></div>
+             <div class="sa-summary-icon">✦</div>
              <div>
                <div class="sa-summary-title">AI Skin Analysis Summary</div>
                <div class="sa-summary-sub">Your skin has been analysed using advanced AI models</div>
@@ -1231,7 +1294,7 @@ with col_center:
         unsafe_allow_html=True,
     )
 
-    # ── 3 stat cards ─────────────────────────────────────────────────
+    # ── 3 Stat Cards ─────────────────────────────────────────────────
     top_sev_level = list(severity.values())[0][0]
     sc1, sc2, sc3 = st.columns(3, gap="medium")
 
@@ -1239,7 +1302,7 @@ with col_center:
         sev_badge = f'<span class="sa-badge {badge_cls(top_sev_level)}">{top_sev_level} Severity</span>'
         st.markdown(
             f"""<div class="sa-stat-card">
-                  <div class="sa-stat-icon" style="background:rgba(239,68,68,0.15);"></div>
+                  <div class="sa-stat-icon" style="background:rgba(239,68,68,0.15);">🔬</div>
                   <div class="sa-stat-label">Primary Concern</div>
                   <div class="sa-stat-value" style="color:#EF4444;">{prediction}</div>
                   <div class="sa-stat-sub">Confidence: {confidence:.0%}</div>
@@ -1251,7 +1314,7 @@ with col_center:
     with sc2:
         st.markdown(
             f"""<div class="sa-stat-card">
-                  <div class="sa-stat-icon" style="background:rgba(34,197,94,0.1);"></div>
+                  <div class="sa-stat-icon" style="background:rgba(34,197,94,0.1);">🌿</div>
                   <div class="sa-stat-label">Skin Type</div>
                   <div class="sa-stat-value" style="color:#22C55E;">{st.session_state['skin_type']}</div>
                   <div class="sa-stat-sub">Confidence: {min(confidence + 0.08, 0.99):.0%}</div>
@@ -1263,7 +1326,7 @@ with col_center:
         cov_pct = int(list(severity.values())[1][2] * 100) if len(severity) > 1 else 45
         st.markdown(
             f"""<div class="sa-stat-card">
-                  <div class="sa-stat-icon" style="background:rgba(234,179,8,0.1);"></div>
+                  <div class="sa-stat-icon" style="background:rgba(234,179,8,0.1);">📊</div>
                   <div class="sa-stat-label">Coverage</div>
                   <div class="sa-stat-value" style="color:#EAB308;">{cov_pct}%</div>
                   <div class="sa-stat-sub">Affected Area</div>
@@ -1271,17 +1334,20 @@ with col_center:
             unsafe_allow_html=True,
         )
 
-    # ── Alert banner ──────────────────────────────────────────────────
+    # ── Alert Banner ──────────────────────────────────────────────────
     if prediction != "Normal":
         st.markdown(
-            f'<div class="sa-alert"> &nbsp; {recommendation} Consistent care is important!</div>',
+            f'<div class="sa-alert">⚠️&nbsp; {recommendation} Consistent care is important!</div>',
             unsafe_allow_html=True,
         )
 
-    # ── Tab navigation ────────────────────────────────────────────────
+    # ── Tab Navigation ────────────────────────────────────────────────
     tab_choice = st.radio(
-        "tab", ["Analysis", "Routine", "Diet & Lifestyle", "Products", "Avoid", "Tips"],
-        horizontal=True, label_visibility="collapsed", key="main_tab",
+        "tab",
+        ["Analysis", "Routine", "Diet & Lifestyle", "Products", "Avoid", "Tips"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="main_tab",
     )
 
     # ── ANALYSIS TAB ──────────────────────────────────────────────────
@@ -1295,20 +1361,16 @@ with col_center:
             if cur_img := st.session_state["uploaded_image"]:
                 show_hm = st.session_state.get("show_heatmap", False)
 
-                # Heatmap simulation using Pillow
                 if show_hm:
                     import numpy as np
-                    arr = np.array(cur_img.resize((480, 480))).astype(float)
-                    # Luminance-based heat mask
+                    arr  = np.array(cur_img.resize((480, 480))).astype(float)
                     gray = 0.299 * arr[:,:,0] + 0.587 * arr[:,:,1] + 0.114 * arr[:,:,2]
                     heat = np.clip((gray - 60) / 160, 0, 1)
-
                     heatmap = np.zeros((*heat.shape, 3), dtype=np.uint8)
-                    heatmap[:,:,0] = (heat * 255).astype(np.uint8)             # R
-                    heatmap[:,:,1] = ((1 - abs(heat - 0.5) * 2) * 255).astype(np.uint8)  # G
-                    heatmap[:,:,2] = ((1 - heat) * 255).astype(np.uint8)       # B
-
-                    blended = (arr * 0.45 + heatmap * 0.55).astype(np.uint8)
+                    heatmap[:,:,0] = (heat * 255).astype(np.uint8)
+                    heatmap[:,:,1] = ((1 - abs(heat - 0.5) * 2) * 255).astype(np.uint8)
+                    heatmap[:,:,2] = ((1 - heat) * 255).astype(np.uint8)
+                    blended     = (arr * 0.45 + heatmap * 0.55).astype(np.uint8)
                     display_img = Image.fromarray(blended)
                 else:
                     display_img = cur_img
@@ -1317,7 +1379,6 @@ with col_center:
                 st.image(display_img, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # Heatmap legend when active
                 if show_hm:
                     st.markdown(
                         """<div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.4rem;justify-content:flex-end;">
@@ -1361,7 +1422,6 @@ with col_center:
 
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            # AI Insight
             st.markdown(
                 f"""<div class="sa-insight-box">
                       <div class="sa-insight-title">✦ AI Insight</div>
@@ -1372,7 +1432,6 @@ with col_center:
 
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            # Confidence breakdown
             card_open()
             sa_label("Model Confidence Breakdown")
             for i, (cls_name, prob) in enumerate(class_probs.items()):
@@ -1392,17 +1451,22 @@ with col_center:
 
     # ── ROUTINE TAB ───────────────────────────────────────────────────
     elif "Routine" in tab_choice:
-        routine = result["routine"]
-        icons   = {"Morning", "Night"}
+        routine  = result["routine"]   # already validated
         r_col1, r_col2 = st.columns(2, gap="medium")
+
+        period_icons = {"Morning": "🌅", "Night": "🌙"}
 
         for idx, (period, steps) in enumerate(routine.items()):
             col = r_col1 if idx % 2 == 0 else r_col2
             with col:
                 card_open()
-                icon = icons.get(period)
+                icon         = period_icons.get(period, "✦")
+                period_color = "#EAB308" if period == "Morning" else "#818CF8"
                 st.markdown(
-                    f'<div class="sa-routine-period"><span style="font-size:1.1rem;">{icon}</span>{period} Routine</div>',
+                    f'<div class="sa-routine-period">'
+                    f'<span style="font-size:1.1rem;">{icon}</span>'
+                    f'<span style="color:{period_color};">{period} Routine</span>'
+                    f'</div>',
                     unsafe_allow_html=True,
                 )
                 for step_icon, step_name, step_desc in steps:
@@ -1421,7 +1485,7 @@ with col_center:
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
         st.markdown(
             f"""<div class="sa-why-box">
-                  <div class="sa-why-title"> Why this routine?</div>
+                  <div class="sa-why-title">💡 Why this routine?</div>
                   <div class="sa-why-text">{recommendation}</div>
                 </div>""",
             unsafe_allow_html=True,
@@ -1434,30 +1498,27 @@ with col_center:
 
         with d1:
             st.markdown(
-                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#22C55E;"> Eat More</div>' +
+                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#22C55E;">✅ Eat More</div>' +
                 "".join(f'<div class="sa-diet-item"><div class="sa-diet-dot" style="background:#22C55E;"></div>{item}</div>' for item in diet["eat"]) +
                 "</div>", unsafe_allow_html=True,
             )
-
         with d2:
             st.markdown(
-                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#EF4444;"> Avoid / Limit</div>' +
+                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#EF4444;">🚫 Avoid / Limit</div>' +
                 "".join(f'<div class="sa-diet-item"><div class="sa-diet-dot" style="background:#EF4444;"></div>{item}</div>' for item in diet["avoid"]) +
                 "</div>", unsafe_allow_html=True,
             )
-
         with d3:
             st.markdown(
-                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#3B82F6;"> Hydration</div>'
+                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#3B82F6;">💧 Hydration</div>'
                 '<div style="text-align:center;padding:1.5rem 0;">'
-                '<div style="font-size:2rem;margin-bottom:0.5rem;"></div>'
+                '<div style="font-size:2.2rem;margin-bottom:0.5rem;">💧</div>'
                 f'<div style="font-family:\'Sora\',sans-serif;font-size:0.85rem;font-weight:600;color:#E0D8F0;">{diet["hydration"]}</div>'
                 '</div></div>', unsafe_allow_html=True,
             )
-
         with d4:
             st.markdown(
-                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#A855F7;"> Lifestyle Tips</div>' +
+                '<div class="sa-diet-card"><div class="sa-diet-title" style="color:#A855F7;">🏃 Lifestyle Tips</div>' +
                 "".join(f'<div class="sa-diet-item"><div class="sa-diet-dot" style="background:#A855F7;"></div>{item}</div>' for item in diet["lifestyle"]) +
                 "</div>", unsafe_allow_html=True,
             )
@@ -1484,8 +1545,8 @@ with col_center:
         card_open()
         sa_label(f"Things to Avoid — {prediction}")
         st.markdown(
-            f'<div style="font-family:\'Sora\',sans-serif;font-size:0.78rem;color:#6A6A8A;margin-bottom:0.75rem;">'
-            f'Based on your skin condition, these practices can worsen your skin health.</div>',
+            '<div style="font-family:\'Sora\',sans-serif;font-size:0.78rem;color:#6A6A8A;margin-bottom:0.75rem;">'
+            'Based on your skin condition, these practices can worsen your skin health.</div>',
             unsafe_allow_html=True,
         )
         for item in result["avoid"]:
@@ -1500,8 +1561,8 @@ with col_center:
         card_open()
         sa_label(f"Skin Tips — {prediction}")
         st.markdown(
-            f'<div style="font-family:\'Sora\',sans-serif;font-size:0.78rem;color:#6A6A8A;margin-bottom:0.75rem;">'
-            f'Expert tips to get the best results from your skincare routine.</div>',
+            '<div style="font-family:\'Sora\',sans-serif;font-size:0.78rem;color:#6A6A8A;margin-bottom:0.75rem;">'
+            'Expert tips to get the best results from your skincare routine.</div>',
             unsafe_allow_html=True,
         )
         for i, tip in enumerate(result["tips"], 1):
@@ -1514,12 +1575,12 @@ with col_center:
     # ── Consistency Banner ────────────────────────────────────────────
     st.markdown(
         """<div class="sa-banner">
-             <span style="font-size:1rem;"
+             <span style="font-size:1.2rem;">✨</span>
              <div>
                <div class="sa-banner-text">Consistency is the key!</div>
                <div class="sa-banner-sub">Visible results take time. Follow the routine, eat healthy and be patient.</div>
              </div>
-             <span style="font-size:1rem;"
+             <span style="font-size:1.2rem;">✨</span>
            </div>""",
         unsafe_allow_html=True,
     )
@@ -1539,7 +1600,8 @@ with col_right:
     if result is None:
         st.stop()
 
-    routine = result["routine"]
+    routine      = result["routine"]   # already validated
+    period_icons = {"Morning": "🌅", "Night": "🌙"}
 
     # ── Personalised Routine Card ─────────────────────────────────────
     card_open(accent=True)
@@ -1554,13 +1616,14 @@ with col_right:
         unsafe_allow_html=True,
     )
 
-    icons = {"Morning", "Night"}
     for period, steps in routine.items():
-        icon = icons.get(period)
+        icon         = period_icons.get(period, "✦")
         period_color = "#EAB308" if period == "Morning" else "#818CF8"
         st.markdown(
-            f'<div class="sa-routine-period"><span style="font-size:1rem;">{icon}</span>'
-            f'<span style="color:{period_color};">{period} Routine</span></div>',
+            f'<div class="sa-routine-period">'
+            f'<span style="font-size:1rem;">{icon}</span>'
+            f'<span style="color:{period_color};">{period} Routine</span>'
+            f'</div>',
             unsafe_allow_html=True,
         )
         for step_icon, step_name, step_desc in steps:
@@ -1578,7 +1641,7 @@ with col_right:
     sa_divider()
     st.markdown(
         f"""<div class="sa-why-box">
-              <div class="sa-why-title"> Why this routine?</div>
+              <div class="sa-why-title">💡 Why this routine?</div>
               <div class="sa-why-text">{recommendation}</div>
             </div>""",
         unsafe_allow_html=True,
