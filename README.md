@@ -12,7 +12,44 @@ The system uses a CNN-based classifier trained on curated dermatological image d
 
 ---
 
+# Dashboard Preview
+
+The screenshots below demonstrate the complete SkinAura workflow, including image upload, preprocessing, CNN-based analysis, confidence visualization, and personalized skincare recommendation generation.
+
+---
+
+## Upload & Image Analysis
+
+<img src="assets/upload-interface.png" width="350"/>
+
+---
+
+## Skin Profile Configuration
+
+<img src="assets/profile-selection.png" width="350"/>
+
+---
+
+## AI Analysis Dashboard
+
+<img src="assets/analysis-dashboard.png" width="850"/>
+
+The analysis dashboard displays:
+- detected skin conditions
+- confidence distributions
+- severity assessment
+- preprocessing visualizations
+- personalized skincare routines
+- product recommendations
+
+---
+
+## Recommendation Engine
+
+<img src="assets/recommendations.png" width="400"/>
 # Problem Framing
+
+---
 
 Most skin analysis ML projects stop at predicting labels.
 
