@@ -21,7 +21,9 @@
   </a>
 </p>
 
-## Modular Computer Vision System for Dermatological Analysis & Personalized Skincare Recommendations
+---
+
+# Modular Computer Vision System for Dermatological Analysis & Personalized Skincare Recommendations
 
 SkinAura AI is an end-to-end AI-powered skincare analysis system that combines computer vision, deep learning, and real-time inference to analyze facial skin conditions and generate personalized skincare recommendations.
 
@@ -253,6 +255,18 @@ This improves prediction interpretability and enhances output transparency.
 | Input Resolution | 224 × 224 × 3 |
 | Output Layer | Softmax Classification |
 | Inference Type | Multi-Class Classification |
+
+---
+
+# Model Performance & System Design
+
+- Trained a CNN-based multi-class skin condition classification model on a curated dataset of 3,500+ dermatological images.
+
+- Achieved 95–96% validation accuracy across supported skin-condition categories using TensorFlow/Keras-based training workflows.
+
+- Implemented real-time inference pipelines with OpenCV preprocessing, CLAHE-based lighting normalization, and confidence-aware prediction outputs.
+
+- Designed a modular FastAPI + Streamlit deployment architecture separating preprocessing, inference, and recommendation workflows.
 
 ---
 
