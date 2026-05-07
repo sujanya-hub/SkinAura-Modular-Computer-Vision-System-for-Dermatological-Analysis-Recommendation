@@ -1,5 +1,4 @@
 # SkinAura AI
-### Modular Computer Vision System for Dermatological Analysis & Skincare Recommendations
 
 <p align="center">
   Real-time skin condition analysis, confidence-aware predictions, and personalized skincare recommendations.
@@ -22,9 +21,15 @@
   </a>
 </p>
 
+## Modular Computer Vision System for Dermatological Analysis & Personalized Skincare Recommendations
+
+SkinAura AI is an end-to-end AI-powered skincare analysis system that combines computer vision, deep learning, and real-time inference to analyze facial skin conditions and generate personalized skincare recommendations.
+
+The project focuses on building a practical and interpretable AI pipeline rather than limiting the workflow to simple image classification outputs.
+
 ---
 
-## Live Deployment
+# Live Deployment
 
 | Service | Link |
 |---|---|
@@ -34,75 +39,74 @@
 
 ---
 
-## Overview
+# Overview
 
-SkinAura AI is an end-to-end computer vision system built for facial skin condition analysis and personalized skincare recommendation generation.
+SkinAura AI combines:
 
-The platform combines:
-- image preprocessing
-- CNN-based classification
-- confidence-aware predictions
-- severity estimation
-- recommendation generation
-- frontend + backend deployment
+- Image preprocessing
+- CNN-based skin condition classification
+- Confidence-aware predictions
+- Severity estimation
+- Personalized skincare recommendations
+- Real-time inference
+- Modular frontend/backend deployment
 
-into a modular real-time inference pipeline.
-
-The project focuses on converting raw model predictions into structured and interpretable skincare guidance instead of limiting the workflow to label classification alone.
+The system transforms raw image predictions into structured skincare guidance with explainable outputs and interpretable recommendation generation.
 
 ---
 
-## Preview
+# Preview
 
-### Upload & Image Analysis Interface
+## Upload & Image Analysis Interface
 
-Image upload workflow with preprocessing, real-time inference, and prediction handling.
+Image upload workflow with preprocessing and real-time inference.
 
-![Upload Interface](assets/upload-analysis.png)
-
----
-
-### Skin Profile Configuration
-
-User profile selection and contextual skincare configuration workflow.
-
-![Skin Profile](assets/skin-profile.png)
+![Upload Interface](assets/upload-interface.png)
 
 ---
 
-### AI Analysis Dashboard
+## Skin Profile Configuration
 
-Confidence-aware predictions, severity assessment, preprocessing visualization, and personalized skincare insights.
+User profile selection and contextual skincare recommendation setup.
+
+![Skin Profile](assets/profile-selection.png)
+
+---
+
+## AI Analysis Dashboard
+
+Confidence-aware predictions, severity interpretation, and preprocessing visualization.
 
 ![Analysis Dashboard](assets/analysis-dashboard.png)
 
 ---
 
-### Recommendation Engine
+## Recommendation Engine
 
-Structured skincare recommendations including routines, ingredient suggestions, and severity-aware guidance.
+Structured skincare routines, ingredient suggestions, and severity-aware recommendations.
 
-![Recommendation Engine](assets/recommendation-engine.png)
-
----
-
-## Problem Framing
-
-Most dermatology-related ML projects stop at classification outputs.
-
-SkinAura extends this workflow by:
-- exposing confidence-aware predictions
-- generating severity-based interpretations
-- creating structured skincare routines
-- mapping skin conditions to ingredients
-- separating inference from recommendation logic
-- building a deployable frontend + backend pipeline
-
-This shifts the project from a model demo into a practical AI-assisted recommendation system.
+![Recommendation Engine](assets/recommendations.png)
 
 ---
 
-## System Architecture
+# Problem Statement
+
+Most dermatology-related machine learning projects stop at classification outputs.
+
+SkinAura AI extends this workflow by:
+
+- Generating confidence-aware predictions
+- Mapping predictions to severity levels
+- Creating structured skincare routines
+- Recommending skincare ingredients
+- Separating inference from recommendation logic
+- Deploying a production-style frontend/backend pipeline
+
+This transforms the project from a simple ML demo into a modular AI-assisted skincare recommendation system.
+
+---
+
+# System Architecture
 
 ```text
           ┌─────────────────────────┐
@@ -129,103 +133,104 @@ This shifts the project from a model demo into a practical AI-assisted recommend
 
 ---
 
-## Core Components
+# Core Components
 
-### Frontend — Streamlit Dashboard
+## Frontend — Streamlit Dashboard
 
 Handles:
-- image uploads
-- prediction visualization
-- confidence rendering
-- skincare recommendation display
-- user interaction workflows
 
-### Backend — FastAPI
+- Image uploads
+- Prediction visualization
+- Confidence rendering
+- Recommendation display
+- User interaction workflows
+
+---
+
+## Backend — FastAPI
 
 Responsible for:
-- request validation
-- image preprocessing
-- model inference
+
+- Request validation
+- Image preprocessing
+- Model inference
 - API orchestration
-- response formatting
+- Response formatting
 
-### Model Layer
+---
 
-CNN-based classifier built using TensorFlow/Keras for dermatological condition classification.
+## Model Layer
 
-### Recommendation Engine
+CNN-based image classification model built using TensorFlow/Keras for dermatological condition prediction.
+
+---
+
+## Recommendation Engine
 
 Rule-based recommendation pipeline that converts predictions into:
-- skincare guidance
-- severity levels
-- ingredient recommendations
+
+- Personalized skincare guidance
+- Severity estimation
+- Ingredient recommendations
 - AM/PM skincare routines
 
 ---
 
-## Detection Categories
+# Detection Categories
+
+The model supports detection of:
 
 - Acne
 - Acne Scars
 - Pigmentation
-- Normal Skin
 - Texture Irregularities
+- Normal Skin
 
 ---
 
-## Model Performance
+# Image Processing Pipeline
 
-| Metric | Value |
-|---|---|
-| Validation Accuracy | 95–96% |
-| Dataset Size | 3,500+ Curated Images |
-| Model Type | CNN |
-| Inference Mode | Real-Time |
+To improve inference consistency across varying image conditions, the system includes OpenCV-based preprocessing techniques.
 
----
-
-## Image Processing Pipeline
-
-To improve inference consistency across different image conditions, the system includes preprocessing using OpenCV.
-
-### Techniques Used
+## Techniques Used
 
 - CLAHE (Contrast Limited Adaptive Histogram Equalization)
 - Adaptive lighting normalization
 - Image resizing and normalization
 - Tensor preprocessing
 
-These steps help improve texture visibility and reduce lighting-related prediction instability.
+These preprocessing stages improve texture visibility and reduce lighting-related prediction instability.
 
 ---
 
-## Interpretable Prediction Design
+# Interpretable Prediction Design
 
 Instead of returning only a single label, the system exposes:
-- primary prediction
-- confidence score
-- secondary prediction probabilities
-- confidence distributions
-- severity mapping
 
-This improves interpretability and makes outputs easier to evaluate.
+- Primary prediction
+- Confidence score
+- Secondary prediction probabilities
+- Confidence distribution
+- Severity mapping
+
+This improves prediction interpretability and enhances output transparency.
 
 ---
 
-## Engineering Decisions
+# Engineering Decisions
 
 | Decision | Reasoning |
 |---|---|
 | CNN-based architecture | Lightweight and efficient for real-time inference |
-| OpenCV preprocessing pipeline | Improves robustness across varying lighting conditions |
-| Frontend/backend separation | Cleaner deployment and modular scaling |
-| Confidence-aware outputs | Improves interpretability over single-label prediction |
-| Rule-based recommendation layer | Keeps recommendation generation explainable |
-| FastAPI inference endpoints | Simplifies API orchestration and deployment |
+| OpenCV preprocessing | Improves robustness under varying lighting conditions |
+| Frontend/backend separation | Enables modular deployment and scalability |
+| Confidence-aware outputs | Improves interpretability |
+| Rule-based recommendation engine | Keeps recommendation generation explainable |
+| FastAPI inference endpoints | Simplifies deployment and API orchestration |
 
 ---
 
-## Technical Stack
+# Technical Stack
 
 | Layer | Technologies |
 |---|---|
@@ -239,28 +244,28 @@ This improves interpretability and makes outputs easier to evaluate.
 
 ---
 
-## Model Specifications
+# Model Specifications
 
 | Component | Details |
 |---|---|
 | Base Architecture | CNN |
 | Framework | TensorFlow/Keras |
-| Input Size | 224 × 224 × 3 |
+| Input Resolution | 224 × 224 × 3 |
 | Output Layer | Softmax Classification |
 | Inference Type | Multi-Class Classification |
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```text
 SkinAura/
 │
 ├── assets/
-│   ├── upload-analysis.png
-│   ├── skin-profile.png
 │   ├── analysis-dashboard.png
-│   └── recommendation-engine.png
+│   ├── profile-selection.png
+│   ├── recommendations.png
+│   └── upload-interface.png
 │
 ├── backend/
 ├── frontend/
@@ -275,9 +280,25 @@ SkinAura/
 
 ---
 
-## Running the Project
+# Running the Project
 
-### Backend
+## Clone the Repository
+
+```bash
+git clone https://github.com/sujanya-hub/SkinAura-Modular-Computer-Vision-System-for-Dermatological-Analysis-Recommendation.git
+```
+
+---
+
+## Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Run Backend
 
 ```bash
 uvicorn backend.main:app --reload
@@ -285,7 +306,7 @@ uvicorn backend.main:app --reload
 
 ---
 
-### Frontend
+## Run Frontend
 
 ```bash
 streamlit run app_dashboard.py
@@ -293,17 +314,17 @@ streamlit run app_dashboard.py
 
 ---
 
-## Current Limitations
+# Current Limitations
 
-- Dataset diversity can still be improved.
-- No clinical or dermatological validation.
-- Recommendation engine is currently rule-based.
-- Performance depends heavily on image quality and lighting conditions.
-- The system is not optimized for extremely low-light or blurry images.
+- Dataset diversity can still be improved
+- No clinical or dermatological validation
+- Recommendation engine is currently rule-based
+- Performance depends heavily on image quality and lighting
+- System is not optimized for blurry or extremely low-light images
 
 ---
 
-## Planned Improvements
+# Planned Improvements
 
 - Vision Transformer (ViT) integration
 - U-Net segmentation for localized analysis
@@ -315,35 +336,46 @@ streamlit run app_dashboard.py
 
 ---
 
-## Example Use Cases
+# Example Use Cases
 
-### Personalized Skincare Assistance
-Generate skincare recommendations based on detected conditions.
+## Personalized Skincare Assistance
 
-### Educational Computer Vision Demo
-Demonstrate end-to-end image classification pipelines.
-
-### AI-Powered Skin Analysis
-Provide confidence-aware dermatological condition predictions.
-
-### ML Deployment Demonstration
-Showcase modular frontend/backend AI deployment workflows.
+Generate skincare recommendations based on detected skin conditions.
 
 ---
 
-## Disclaimer
+## Educational Computer Vision Demonstration
 
-This project is intended for educational and AI research purposes only.
+Demonstrates modular image classification and deployment pipelines.
+
+---
+
+## AI-Powered Skin Analysis
+
+Provides confidence-aware dermatological condition predictions.
+
+---
+
+## ML Deployment Demonstration
+
+Showcases frontend/backend deployment of AI systems using FastAPI and Streamlit.
+
+---
+
+# Disclaimer
+
+This project is intended for educational and research purposes only.
 
 It is not a medical diagnostic system and should not replace professional dermatological advice.
 
 ---
 
-## Developer
+# Developer
 
-### Sujanya Srinivas
+## Sujanya Srinivas
 
 AI/ML Engineer focused on:
+
 - Computer Vision Systems
 - AI Deployment Pipelines
 - Real-Time Inference Systems
@@ -352,6 +384,6 @@ AI/ML Engineer focused on:
 
 ---
 
-## License
+# License
 
 MIT License
