@@ -1,5 +1,5 @@
 ﻿"""
-app_dashboard.py - SkinAura: AI Analysis Dashboard (v5.0)
+app.py - SkinAura: AI Analysis Dashboard (v5.0)
 ==========================================================
 Upgraded to match reference UI:
   - Removed all emojis; replaced with clean text/icon alternatives
