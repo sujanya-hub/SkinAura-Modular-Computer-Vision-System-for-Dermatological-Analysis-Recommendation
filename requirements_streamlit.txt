@@ -1,0 +1,8 @@
+streamlit
+requests
+pandas
+numpy
+Pillow
+matplotlib
+plotly
+opencv-python-headless
