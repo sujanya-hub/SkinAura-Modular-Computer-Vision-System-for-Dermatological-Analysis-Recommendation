@@ -38,7 +38,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # CONFIG
 # ---------------------------------------------------------------------------
-BASE_URL        = "http://127.0.0.1:8000/api/v1"
+BASE_URL        = "https://skinaura-backend.onrender.com/api/v1"
 PREDICT_API_URL = f"{BASE_URL}/predict"
 HEALTH_API_URL  = f"{BASE_URL}/health"
 API_TIMEOUT_SECONDS = 60
