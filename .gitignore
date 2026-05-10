@@ -1,30 +1,73 @@
+# =========================
 # Python
+# =========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Virtual env
+# =========================
+# Virtual Environment
+# =========================
 .venv/
+venv/
 
-# Data / Large files
-datasets/
-*.zip
-
-# IDE
-.vscode/
-
-# Env
+# =========================
+# Environment Variables
+# =========================
 .env
 
-# Models (optional if large)
-*.keras
-*.pt
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
 
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Cache
+# =========================
+cache/
+*.cache
+
+# =========================
 # Logs
+# =========================
 logs/
+*.log
 
-# FAISS / vector DB
+# =========================
+# Datasets / Large Files
+# =========================
+datasets/
+pigmentation.v2i.multiclass/
+*.zip
+
+# =========================
+# Training Artifacts
+# =========================
+training_log.csv
+metrics_log.json
+*.ckpt
+
+# =========================
+# Vector DB / RAG
+# =========================
 *.index
 *.pkl
-
-# Optional
 backend/rag/faiss*
+
+# =========================
+# Duplicate / Unused Models
+# =========================
+backend/models/best_model.h5
+
+# =========================
+# Streamlit
+# =========================
+.streamlit/secrets.toml
