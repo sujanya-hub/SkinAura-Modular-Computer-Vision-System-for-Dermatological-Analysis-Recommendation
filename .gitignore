@@ -71,3 +71,4 @@ backend/models/best_model.h5
 # Streamlit
 # =========================
 .streamlit/secrets.toml
+.keras

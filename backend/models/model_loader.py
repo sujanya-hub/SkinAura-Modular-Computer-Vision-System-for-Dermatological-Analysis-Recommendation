@@ -26,6 +26,11 @@ import os
 from pathlib import Path
 from typing import Optional
 
+# CHANGE 1 — requests added for Hugging Face model auto-download.
+# Placed alongside the other stdlib / third-party imports; no existing
+# import is moved or removed.
+import requests
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -44,6 +49,15 @@ DATASET_DIR = Path(os.environ.get(
     "datasets/skin_conditions",
 ))
 
+# CHANGE 2 — Hugging Face model URL.
+# Overridable via env-var so deployments can point at a different repo or
+# a private mirror without touching code.  Uses /resolve/ (direct download),
+# never /blob/ (HTML page).
+MODEL_URL: str = os.environ.get(
+    "SKINAURA_MODEL_URL",
+    "https://huggingface.co/sujanya/SkinAura-model/resolve/main/skin_issue_model.keras",
+)
+
 # INPUT_SIZE is now a *default* only.
 # preprocess_image() always accepts an explicit size argument so callers
 # (e.g. predict.py) can pass the value read directly from model.input_shape,
@@ -53,6 +67,104 @@ INPUT_SIZE = (_default_size, _default_size)
 
 # ── Internal cache ────────────────────────────────────────────────────────────
 _CLASS_LABELS: list[str] = []
+
+
+# ---------------------------------------------------------------------------
+# CHANGE 3 — Hugging Face auto-download
+# ---------------------------------------------------------------------------
+
+def download_model_if_missing(
+    model_path: Path = MODEL_PATH,
+    model_url: str = MODEL_URL,
+    chunk_size: int = 8 * 1024 * 1024,   # 8 MB chunks
+    timeout: int    = 300,                # 5-minute total timeout
+) -> None:
+    """
+    Download the Keras model from Hugging Face if it is not already present
+    on the local filesystem.
+
+    Behaviour
+    ---------
+    - If ``model_path`` already exists the function returns immediately
+      (no network request, no checksum, no lock needed for read-only check).
+    - Otherwise the parent directory is created (parents=True, exist_ok=True),
+      the file is streamed in ``chunk_size`` chunks, and the total downloaded
+      size is logged on completion.
+    - Uses ``stream=True`` so the full file is never buffered in RAM.
+    - A ``timeout`` guards against hung connections on cold HF servers.
+
+    Parameters
+    ----------
+    model_path : Path
+        Destination path for the .keras file.  Defaults to MODULE-level
+        MODEL_PATH so callers never need to pass it explicitly.
+    model_url : str
+        Direct-download URL (must use /resolve/, not /blob/).
+        Defaults to MODULE-level MODEL_URL.
+    chunk_size : int
+        Bytes per write chunk.  8 MB is a good balance between memory use
+        and number of syscalls for a ~100 MB model file.
+    timeout : int
+        Seconds before the HTTP request is abandoned.  Raise this on very
+        slow connections; lower it in unit tests.
+
+    Raises
+    ------
+    requests.RequestException
+        Re-raised after logging so the caller (load_model) can catch it and
+        fall through to API-only mode rather than crashing the process.
+    """
+    if model_path.exists():
+        logger.info(f"Model already present at {model_path} — skipping download.")
+        return
+
+    logger.info(
+        f"Model file not found at '{model_path}'. "
+        f"Downloading from Hugging Face: {model_url}"
+    )
+
+    # Ensure destination directory exists before opening the file for writing.
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with requests.get(model_url, stream=True, timeout=timeout) as response:
+            response.raise_for_status()
+
+            # Content-Length is optional; log it when available.
+            content_length = response.headers.get("Content-Length")
+            if content_length:
+                mb = int(content_length) / (1024 * 1024)
+                logger.info(f"Download size: {mb:.1f} MB — writing to {model_path}")
+            else:
+                logger.info(f"Download size unknown — writing to {model_path}")
+
+            bytes_written = 0
+            with open(model_path, "wb") as fh:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:  # filter out keep-alive empty chunks
+                        fh.write(chunk)
+                        bytes_written += len(chunk)
+
+        downloaded_mb = bytes_written / (1024 * 1024)
+        logger.info(
+            f"Model download complete: {model_path} "
+            f"({downloaded_mb:.1f} MB written)."
+        )
+
+    except requests.RequestException as exc:
+        logger.error(
+            f"Failed to download model from {model_url}: {exc}. "
+            "Backend will start in API-only / demo mode."
+        )
+        # Remove a partially-written file so the next startup attempt
+        # does not mistake a truncated file for a valid model.
+        if model_path.exists():
+            try:
+                model_path.unlink()
+                logger.info(f"Removed partial download at {model_path}.")
+            except OSError as rm_exc:
+                logger.warning(f"Could not remove partial download: {rm_exc}")
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +360,20 @@ def load_model():
     """
     get_class_labels()  # print label map at startup
 
+    # CHANGE 4 — attempt Hugging Face download before checking existence.
+    # download_model_if_missing() is a no-op when the file is already present,
+    # so this adds zero overhead on subsequent restarts.
+    # Any network error is caught inside the function; it logs and re-raises,
+    # and we catch it here so a download failure degrades gracefully to
+    # API-only mode instead of crashing the process.
+    try:
+        download_model_if_missing()
+    except Exception:
+        # Error already logged inside download_model_if_missing().
+        # Fall through — the model_path.exists() check below will fail and
+        # the function will return (None, None) for API-only / demo mode.
+        pass
+
     tf = _try_load_tensorflow()
     if tf is None:
         logger.warning("TensorFlow not installed — running in API-only mode.")
@@ -329,16 +455,25 @@ def preprocess_image(
 
     Pipeline
     --------
-      1. Decode JPEG/PNG bytes → RGB tensor
-      2. Resize to target_size  (defaults to INPUT_SIZE)
-      3. Cast to float32 and normalise to [0, 1]
+      1. Decode JPEG/PNG bytes → RGB tensor          (uint8, range [0, 255])
+      2. Resize to target_size                        (float, range [0, 255])
+      3. Cast to float32                              (float, range [0, 255])
       4. Expand dims → (1, H, W, 3) batch
 
-    Note: normalisation to [0, 1] is intentional.  The model's first layer
-    is a Lambda(efficientnet.preprocess_input) which expects values in
-    [0, 255] OR [0, 1] depending on how it was trained.  If predictions
-    look wrong, swap ``/ 255.0`` for no division and let EfficientNet's own
-    preprocess_input handle scaling.
+    CHANGE 5 — preprocessing fix (double-normalisation removed).
+
+    The saved model's first layer is Lambda(efficientnet.preprocess_input).
+    EfficientNet's preprocess_input expects raw pixel values in [0, 255] and
+    internally scales them to [-1, 1] via ``x / 127.5 - 1.0``.
+
+    The previous code divided by 255.0 BEFORE the model, so the Lambda layer
+    received values in [0, 1] and scaled them to approximately [-1, -0.992],
+    causing every prediction to be made from near-uniform near-negative input
+    — effectively random/garbage output.
+
+    Fix: cast to float32 only.  Do NOT divide by 255.  The Lambda layer
+    inside the model graph handles all normalisation exactly as it did
+    during training.
     """
     if tf is None:
         tf = _try_load_tensorflow()
@@ -353,7 +488,11 @@ def preprocess_image(
             image_bytes, channels=3, expand_animations=False
         )
         img_tensor = tf.image.resize(img_tensor, size)
-        img_tensor = tf.cast(img_tensor, tf.float32) / 255.0
+        # Cast to float32 only — do NOT divide by 255.
+        # The Lambda(preprocess_input) layer inside the model expects raw
+        # [0, 255] pixel values and handles normalisation internally.
+        # Dividing here causes double-normalisation → garbage predictions.
+        img_tensor = tf.cast(img_tensor, tf.float32)
         img_tensor = tf.expand_dims(img_tensor, axis=0)
         result = img_tensor.numpy()
         logger.debug(
