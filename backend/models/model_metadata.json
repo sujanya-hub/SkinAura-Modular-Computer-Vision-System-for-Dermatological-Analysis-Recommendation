@@ -1,0 +1,27 @@
+{
+  "architecture": "MobileNetV2",
+  "image_size": [
+    224,
+    224
+  ],
+  "class_names": [
+    "acne",
+    "acne_scars",
+    "normal",
+    "pigmentation"
+  ],
+  "num_classes": 4,
+  "validation_accuracy": 0.4658,
+  "validation_loss": 0.8979,
+  "training_date": "2026-05-09T13:50:12.904724",
+  "augmentation": [
+    "RandomFlip",
+    "RandomRotation(0.12)",
+    "RandomZoom(0.12)",
+    "RandomTranslation(0.08)",
+    "RandomBrightness(0.2)",
+    "RandomContrast(0.2)"
+  ],
+  "loss": "FocalLoss(gamma=2.0) + class_weight",
+  "notes": "class_names order matches tf.keras alphabetical folder assignment. model_loader.py reads class_names.json for inference."
+}

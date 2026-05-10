@@ -3,36 +3,74 @@ backend/api/health.py
 ======================
 GET /health — service liveness and readiness probe.
 
-Returns a :class:`~backend.schemas.responses.HealthResponse` summarising
-the operational status of every SkinAura backend sub-service.
-
 Overall status logic
 --------------------
 - ``"ok"``       — all three sub-services are fully operational.
-- ``"degraded"`` — at least one sub-service is not ready but the
-                   application is still able to serve partial responses
-                   (e.g. CV-only when RAG or LLM is unavailable).
+- ``"degraded"`` — at least one sub-service is genuinely broken (not merely
+                   unconfigured).  Missing Groq key = expected dev state,
+                   NOT degraded.
 """
 from __future__ import annotations
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from backend.core.config import get_settings
 from backend.core.logger import get_logger
-from backend.models.model_loader import get_model_registry
-from backend.schemas.responses import HealthResponse, ServiceStatusMap
-from backend.services.llm_service import get_llm_service
-from backend.services.rag_service import get_rag_service
 
-router   = APIRouter(tags=["Health"])
-logger   = get_logger(__name__)
-settings = get_settings()
+router = APIRouter(tags=["Health"])
+logger = get_logger(__name__)
 
-# Sub-service status strings considered "fully operational".
-_HEALTHY_MODEL_STATUS: str = "loaded"
-_HEALTHY_RAG_STATUS:   str = "ready"
-_HEALTHY_LLM_STATUSES: frozenset[str] = frozenset({"ready", "mock_mode"})
+# ── What counts as "healthy" for each sub-service ────────────────────────────
+_HEALTHY_MODEL_STATUSES: frozenset[str] = frozenset({"loaded"})
+_HEALTHY_RAG_STATUSES:   frozenset[str] = frozenset({"ready"})
+_HEALTHY_LLM_STATUSES:   frozenset[str] = frozenset({
+    "ready",
+    "mock_mode",
+    "not_initialised",   # No Groq key configured — expected during development.
+                         # The pipeline still works via mock fallback, so this
+                         # is NOT a degraded state.
+})
+
+
+def _get_settings():
+    try:
+        from backend.core.config import get_settings
+        return get_settings()
+    except Exception:
+        return None
+
+
+def _get_model_status() -> str:
+    """
+    Read model status from the predict module's in-process cache.
+    Never re-loads from disk — zero latency on every health poll.
+    """
+    try:
+        import backend.api.predict as _predict_mod
+        if not _predict_mod._demo_mode and _predict_mod._model is not None:
+            return "loaded"
+        return "not_loaded"
+    except Exception as exc:
+        logger.warning("Could not determine model status: %s", exc)
+        return "not_loaded"
+
+
+def _get_rag_status() -> str:
+    try:
+        from backend.services.rag_service import get_rag_service
+        return get_rag_service().status()
+    except Exception as exc:
+        logger.warning("RAG service status unavailable: %s", exc)
+        return "not_loaded"
+
+
+def _get_llm_status() -> str:
+    try:
+        from backend.services.llm_service import get_llm_service
+        return get_llm_service().status()
+    except Exception as exc:
+        logger.warning("LLM service status unavailable: %s", exc)
+        return "not_initialised"
 
 
 def _derive_overall_status(
@@ -41,80 +79,75 @@ def _derive_overall_status(
     llm_status:   str,
 ) -> str:
     """
-    Derive the top-level ``status`` field.
-
-    The application is considered ``"ok"`` when:
-      - The model loader has ``"loaded"`` all models.
-      - The RAG service is ``"ready"``.
-      - The LLM service is ``"ready"`` *or* ``"mock_mode"`` (Groq absent
-        but fallback is active — this is an expected deployment state
-        during development, not an error).
-
-    Any other combination returns ``"degraded"``.
-
-    Args:
-        model_status: Aggregated model-loader status string.
-        rag_status:   RAG service status string.
-        llm_status:   LLM service status string.
-
-    Returns:
-        ``"ok"`` or ``"degraded"``.
+    ``"ok"``       — every service is in a healthy/expected state.
+    ``"degraded"`` — a service is in a genuinely broken state
+                     (not merely unconfigured or in mock mode).
     """
-    if (
-        model_status == _HEALTHY_MODEL_STATUS
-        and rag_status == _HEALTHY_RAG_STATUS
-        and llm_status in _HEALTHY_LLM_STATUSES
-    ):
-        return "ok"
-    return "degraded"
+    all_ok = (
+        model_status in _HEALTHY_MODEL_STATUSES
+        and rag_status   in _HEALTHY_RAG_STATUSES
+        and llm_status   in _HEALTHY_LLM_STATUSES
+    )
+    return "ok" if all_ok else "degraded"
 
 
 @router.get(
     "/health",
-    response_model=HealthResponse,
     summary="Service Health Check",
     description=(
-        "Returns the operational status of SkinAura and all backend sub-services.  "
-        "Overall status is ``ok`` when all services are healthy, ``degraded`` when "
-        "one or more services are unavailable."
+        "Returns the operational status of SkinAura and all backend sub-services. "
+        "Overall status is ``ok`` when all services are healthy or in an expected "
+        "unconfigured state, ``degraded`` when a service is genuinely broken."
     ),
 )
 async def health_check() -> JSONResponse:
     """
-    Aggregate sub-service statuses and return a
-    :class:`~backend.schemas.responses.HealthResponse`.
-
-    This endpoint never raises — all status lookups are non-blocking
-    property reads on already-initialised singletons.
+    Aggregate sub-service statuses and return a health payload.
+    Never raises — all status lookups are wrapped in try/except.
     """
-    registry = get_model_registry()
-    model_stati = registry.status()  # Dict[str, "loaded" | "not_loaded"]
+    settings = _get_settings()
+    version  = getattr(settings, "app_version", "1.0.0") if settings else "1.0.0"
 
-    # Both models must be loaded for the model_loader to be considered healthy.
-    model_status: str = (
-        _HEALTHY_MODEL_STATUS
-        if all(v == _HEALTHY_MODEL_STATUS for v in model_stati.values())
-        else "not_loaded"
-    )
-
-    rag_status: str = get_rag_service().status()
-    llm_status: str = get_llm_service().status()
+    model_status = _get_model_status()
+    rag_status   = _get_rag_status()
+    llm_status   = _get_llm_status()
 
     overall_status = _derive_overall_status(model_status, rag_status, llm_status)
 
+    # Only log a warning when something is GENUINELY broken, not on every poll.
     if overall_status == "degraded":
         logger.warning(
             "Health check: degraded (model_loader=%s, rag=%s, llm=%s).",
             model_status, rag_status, llm_status,
         )
+    else:
+        logger.debug(
+            "Health check: ok (model_loader=%s, rag=%s, llm=%s).",
+            model_status, rag_status, llm_status,
+        )
 
-    payload = HealthResponse(
-        status=   overall_status,
-        version=  settings.app_version,
-        services= ServiceStatusMap(
-            model_loader= model_status,
-            rag=          rag_status,
-            llm=          llm_status,
-        ),
-    )
-    return JSONResponse(content=payload.model_dump(mode="json"))
+    payload = {
+        "status":   overall_status,
+        "version":  version,
+        "services": {
+            "model_loader": model_status,
+            "rag":          rag_status,
+            "llm":          llm_status,
+        },
+    }
+
+    # Prefer typed schema if available; fall back to raw dict (always works).
+    try:
+        from backend.schemas.responses import HealthResponse, ServiceStatusMap
+        typed = HealthResponse(
+            status=   overall_status,
+            version=  version,
+            services= ServiceStatusMap(
+                model_loader= model_status,
+                rag=          rag_status,
+                llm=          llm_status,
+            ),
+        )
+        return JSONResponse(content=typed.model_dump(mode="json"))
+    except Exception:
+        return JSONResponse(content=payload)

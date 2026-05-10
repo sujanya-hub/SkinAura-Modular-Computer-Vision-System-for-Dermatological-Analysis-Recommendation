@@ -1,290 +1,382 @@
 """
 backend/models/model_loader.py
-Safe model registry — never crashes on startup.
-Missing weights  → placeholder/demo mode (logged as WARNING).
-Corrupt weights  → same fallback, no exception propagated to caller.
-torch unavailable → pure-Python stubs used transparently.
+==============================
+Singleton model loader with dynamic class-name resolution.
+
+Label-mapping contract
+──────────────────────
+Class indices are ALWAYS derived from one of three sources, in priority order:
+
+  1. backend/models/class_names.json   ← written by train_model.py at the end
+                                          of every training run
+  2. Dataset folder scan (alphabetical) ← fallback when the JSON is absent
+  3. Hard-coded sentinel list           ← last resort; emits a loud WARNING
+
+This guarantees that what the model learned during training and what inference
+maps predictions onto are ALWAYS in sync.
+
+NOTE: The old `CLASS_LABELS` constant and `get_model_registry` / `SkinIssueClassifier`
+      have been removed.  All consumers must use get_class_labels() / index_to_label().
 """
 from __future__ import annotations
 
+import json
 import logging
-import time
-from dataclasses import dataclass, field
+import os
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
-_KEY_SKIN_ISSUE = "skin_issue"
-_KEY_SKIN_TONE  = "skin_tone"
-_ModelOutcome   = Literal["trained", "placeholder"]
+# ── Paths ─────────────────────────────────────────────────────────────────────
+MODEL_PATH = Path(os.environ.get(
+    "SKINAURA_MODEL_PATH",
+    "backend/models/skin_issue_model.keras",
+))
+CLASS_NAMES_PATH = Path(os.environ.get(
+    "SKINAURA_CLASS_NAMES_PATH",
+    "backend/models/class_names.json",
+))
+DATASET_DIR = Path(os.environ.get(
+    "SKINAURA_DATASET_DIR",
+    "datasets/skin_conditions",
+))
 
-# ---------------------------------------------------------------------------
-# Try to import torch once — if unavailable every loader uses stubs.
-# ---------------------------------------------------------------------------
-try:
-    import torch
-    import torch.nn as nn
-    _TORCH_OK = True
-except Exception:
-    torch = None  # type: ignore[assignment]
-    nn    = None  # type: ignore[assignment]
-    _TORCH_OK = False
-    logger.warning("torch not available — all models will run as stubs.")
+# INPUT_SIZE is now a *default* only.
+# preprocess_image() always accepts an explicit size argument so callers
+# (e.g. predict.py) can pass the value read directly from model.input_shape,
+# guaranteeing the preprocessing and the model are always in sync.
+_default_size = int(os.environ.get("SKINAURA_INPUT_SIZE", "192"))
+INPUT_SIZE = (_default_size, _default_size)
 
-
-# ---------------------------------------------------------------------------
-# Stub models (zero dependencies, always importable)
-# ---------------------------------------------------------------------------
-
-class SkinIssueClassifier:
-    LABELS = [
-        "acne", "redness", "hyperpigmentation", "dryness",
-        "oiliness", "wrinkles", "dark_circles", "clear",
-    ]
-    N_CLASSES    = len(LABELS)
-    _is_stub     = True
-
-    # nn.Module interface shim so callers can do model(tensor) if they want
-    def __call__(self, x):
-        import random
-        scores = [random.random() for _ in self.LABELS]
-        t = sum(scores)
-        return [[s / t for s in scores]]
-
-    def eval(self):
-        return self
-
-
-class SkinToneClassifier:
-    TONE_LABELS      = ["Type I (Very Fair)", "Type II (Fair)", "Type III (Medium)",
-                        "Type IV (Olive)", "Type V (Brown)", "Type VI (Deep)"]
-    TONE_HEX         = ["#F9D4C3", "#F0C4A6", "#E0A882",
-                        "#C68642", "#8D5524", "#4A2912"]
-    UNDERTONE_LABELS = ["warm", "neutral", "cool"]
-    _is_stub         = True
-
-    def __call__(self, x):
-        import random
-        t_scores = [random.random() for _ in self.TONE_LABELS]
-        u_scores = [random.random() for _ in self.UNDERTONE_LABELS]
-        ts = sum(t_scores); us = sum(u_scores)
-        return (
-            [[s / ts for s in t_scores]],
-            [[s / us for s in u_scores]],
-        )
-
-    def eval(self):
-        return self
+# ── Internal cache ────────────────────────────────────────────────────────────
+_CLASS_LABELS: list[str] = []
 
 
 # ---------------------------------------------------------------------------
-# Optional real torch architectures (only used when torch is present)
+# Label resolution  (single source of truth)
 # ---------------------------------------------------------------------------
 
-def _build_torch_skin_issue():
-    """Return a real nn.Module SkinIssueClassifier, or None if torch missing."""
-    if not _TORCH_OK:
+def _load_class_names_from_json(path: Path) -> list[str] | None:
+    if not path.exists():
         return None
     try:
-        class _Real(nn.Module):
-            LABELS    = SkinIssueClassifier.LABELS
-            N_CLASSES = SkinIssueClassifier.N_CLASSES
-            _is_stub  = False
-
-            def __init__(self):
-                super().__init__()
-                self.features = nn.Sequential(
-                    nn.Conv2d(3, 32, 3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(32), nn.ReLU(inplace=True),
-                    nn.Conv2d(32, 64, 3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(64), nn.ReLU(inplace=True),
-                    nn.AdaptiveAvgPool2d((1, 1)),
-                )
-                self.classifier = nn.Sequential(
-                    nn.Flatten(),
-                    nn.Linear(64, 128), nn.ReLU(inplace=True),
-                    nn.Dropout(p=0.3),
-                    nn.Linear(128, self.N_CLASSES),
-                )
-
-            def forward(self, x):
-                return self.classifier(self.features(x))
-
-        return _Real
+        names = json.loads(path.read_text())
+        if isinstance(names, list) and all(isinstance(n, str) for n in names):
+            return [n.lower().strip() for n in names]
     except Exception as exc:
-        logger.warning("Could not define torch SkinIssueClassifier: %s", exc)
+        logger.warning(f"Could not parse {path}: {exc}")
+    return None
+
+
+def _load_class_names_from_dataset(dataset_dir: Path) -> list[str] | None:
+    if not dataset_dir.exists():
         return None
-
-
-def _build_torch_skin_tone():
-    """Return a real nn.Module SkinToneClassifier, or None if torch missing."""
-    if not _TORCH_OK:
-        return None
-    try:
-        class _Real(nn.Module):
-            TONE_LABELS      = SkinToneClassifier.TONE_LABELS
-            TONE_HEX         = SkinToneClassifier.TONE_HEX
-            UNDERTONE_LABELS = SkinToneClassifier.UNDERTONE_LABELS
-            _is_stub         = False
-
-            def __init__(self):
-                super().__init__()
-                self.backbone = nn.Sequential(
-                    nn.Conv2d(3, 32, 3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(32), nn.ReLU(inplace=True),
-                    nn.Conv2d(32, 32, 3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(32), nn.ReLU(inplace=True),
-                    nn.AdaptiveAvgPool2d((1, 1)),
-                )
-                self.tone_head      = nn.Linear(32, len(self.TONE_LABELS))
-                self.undertone_head = nn.Linear(32, len(self.UNDERTONE_LABELS))
-
-            def forward(self, x):
-                f = self.backbone(x).flatten(1)
-                return self.tone_head(f), self.undertone_head(f)
-
-        return _Real
-    except Exception as exc:
-        logger.warning("Could not define torch SkinToneClassifier: %s", exc)
-        return None
-
-
-# Build once at module level — None if torch unavailable.
-_TorchSkinIssue = _build_torch_skin_issue()
-_TorchSkinTone  = _build_torch_skin_tone()
-
-
-# ---------------------------------------------------------------------------
-# Internal loader helper
-# ---------------------------------------------------------------------------
-
-def _load_model(key: str, real_cls, stub_cls, weights_path: Path):
-    """
-    Load *real_cls* from *weights_path* if possible.
-    Falls back to *stub_cls* on ANY failure — never raises.
-    Returns (model_instance, outcome_str).
-    """
-    t0 = time.perf_counter()
-
-    if real_cls is None:
-        # torch not available
-        instance = stub_cls()
-        outcome: _ModelOutcome = "placeholder"
-        logger.warning(
-            "Model '%s': torch unavailable, using stub (demo mode).", key
-        )
-    elif not weights_path.exists():
-        try:
-            instance = real_cls()
-            instance.eval()
-        except Exception:
-            instance = stub_cls()
-        outcome = "placeholder"
-        logger.warning(
-            "Model '%s': no weights at %s — placeholder init.", key, weights_path
-        )
-    else:
-        try:
-            instance = real_cls()
-            state = torch.load(str(weights_path), map_location="cpu", weights_only=True)
-            instance.load_state_dict(state)
-            instance.eval()
-            outcome = "trained"
-        except Exception as exc:
-            logger.warning(
-                "Model '%s': failed to load weights from %s (%s) — using stub.",
-                key, weights_path, exc,
-            )
-            instance = stub_cls()
-            outcome  = "placeholder"
-
-    elapsed = (time.perf_counter() - t0) * 1_000
-    logger.info(
-        "Model '%s' ready — outcome: %s | %.0f ms.", key, outcome, elapsed
+    classes = sorted(
+        sub.name.lower()
+        for sub in dataset_dir.iterdir()
+        if sub.is_dir() and not sub.name.startswith(".")
     )
-    return instance, outcome
+    return classes if classes else None
+
+
+def _log_label_map(names: list[str], source: str) -> None:
+    lines = "\n".join(f"  {i} → {n}" for i, n in enumerate(names))
+    logger.info(f"Class labels loaded from {source}:\n{lines}")
+
+
+def resolve_class_names(
+    class_names_path: Path = CLASS_NAMES_PATH,
+    dataset_dir: Path = DATASET_DIR,
+) -> list[str]:
+    """
+    Determine class labels in the same alphabetical order Keras uses.
+
+    Priority:
+      1. class_names.json  (written by training script — preferred)
+      2. Dataset folder scan
+      3. Hard-coded fallback  (emits WARNING; fix by running train_model.py)
+    """
+    names = _load_class_names_from_json(class_names_path)
+    if names:
+        _log_label_map(names, str(class_names_path))
+        return names
+
+    names = _load_class_names_from_dataset(dataset_dir)
+    if names:
+        logger.warning(
+            f"{class_names_path} not found — derived class order from dataset "
+            f"folders at '{dataset_dir}'. Re-run train_model.py to generate "
+            "class_names.json for a stable, guaranteed-correct mapping."
+        )
+        _log_label_map(names, f"dataset scan ({dataset_dir})")
+        return names
+
+    fallback = [
+        "dark_spots",
+        "inflammatory_acne",
+        "non_inflammatory_acne_blackheads",
+        "non_inflammatory_acne_whiteheads",
+        "pigmentation",
+        "pores",
+        "redness",
+        "wrinkles",
+    ]
+    logger.warning(
+        " LABEL FALLBACK ACTIVE — could not resolve class names from JSON "
+        "or dataset scan. Using hard-coded list. Predictions MAY BE WRONG. "
+        "Run train_model.py to fix this permanently."
+    )
+    _log_label_map(fallback, "hard-coded fallback")
+    return fallback
+
+
+def get_class_labels() -> list[str]:
+    """
+    Return the globally resolved, cached class labels.
+
+    This is the ONLY function downstream code (predictor, severity engine,
+    Grad-CAM, API routes) should call to obtain class names.
+    """
+    global _CLASS_LABELS
+    if not _CLASS_LABELS:
+        _CLASS_LABELS = resolve_class_names()
+    return _CLASS_LABELS
+
+
+def index_to_label(index: int) -> str:
+    """
+    Convert a model output index to its snake_case label.
+
+    Raises IndexError if the index is out of range — which would indicate
+    a mismatch between the saved model and class_names.json.
+    """
+    labels = get_class_labels()
+    if 0 <= index < len(labels):
+        return labels[index]
+    raise IndexError(
+        f"Prediction index {index} out of range for {len(labels)} classes. "
+        "Ensure class_names.json was produced by the current training run."
+    )
 
 
 # ---------------------------------------------------------------------------
-# Registry
+# TensorFlow / model loading
 # ---------------------------------------------------------------------------
 
-@dataclass
-class ModelRegistry:
-    """
-    Lazy, failure-tolerant model registry.
-    Both 'trained' and 'placeholder' outcomes are reported as 'loaded'
-    by status() so health checks pass.
-    """
+def _try_load_tensorflow():
+    try:
+        import tensorflow as tf
+        tf.get_logger().setLevel("ERROR")
+        return tf
+    except ImportError:
+        return None
 
-    _cache:   Dict[str, object]         = field(default_factory=dict, init=False)
-    _outcome: Dict[str, _ModelOutcome]  = field(default_factory=dict, init=False)
 
-    def __post_init__(self):
-        # Resolve device safely.
+def _resolve_preprocess_input(tf):
+    """
+    Return the EfficientNet preprocess_input function — matching the Lambda
+    layer serialised inside the .keras graph — then fall through to other
+    common backbones, and finally to an identity lambda.
+
+    Crucially this function is passed as a custom_object so Keras can
+    deserialise the Lambda(preprocess_input) layer by name.
+    """
+    # EfficientNet is first because that is what the trained model uses.
+    for module_name in (
+        "efficientnet",
+        "efficientnet_v2",
+        "mobilenet_v2",
+        "mobilenet",
+        "resnet",
+        "resnet_v2",
+        "vgg16",
+        "vgg19",
+        "inception_v3",
+        "xception",
+        "densenet",
+        "nasnet",
+    ):
         try:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            module = getattr(tf.keras.applications, module_name)
+            fn = module.preprocess_input
+            logger.info(f"Using preprocess_input from keras.applications.{module_name}")
+            return fn
         except Exception:
-            self.device = None
+            continue
+    logger.warning(
+        "Could not locate a known preprocess_input helper — "
+        "falling back to identity function. Predictions may be inaccurate."
+    )
+    return lambda x: x
 
-    @property
-    def skin_issue_model(self) -> SkinIssueClassifier:
-        if _KEY_SKIN_ISSUE not in self._cache:
-            weights = self._safe_path("skin_issue_model_path")
-            instance, outcome = _load_model(
-                _KEY_SKIN_ISSUE, _TorchSkinIssue, SkinIssueClassifier, weights
+
+def get_model_input_size(model) -> tuple[int, int]:
+    """
+    Read the spatial input dimensions directly from the loaded model's
+    input_shape, e.g. (None, 192, 192, 3) → (192, 192).
+
+    Falls back to the module-level INPUT_SIZE constant if the shape
+    cannot be determined (e.g. dynamic/unknown dims).
+    """
+    try:
+        shape = model.input_shape  # (None, H, W, C)
+        h, w = int(shape[1]), int(shape[2])
+        logger.info(f"Derived input size from model.input_shape: ({h}, {w})")
+        return (h, w)
+    except Exception as exc:
+        logger.warning(
+            f"Could not read input size from model.input_shape ({exc}); "
+            f"falling back to INPUT_SIZE={INPUT_SIZE}"
+        )
+        return INPUT_SIZE
+
+
+def load_model():
+    """
+    Load the Keras .keras model.
+    Returns (model, tf) tuple, or (None, None) if unavailable.
+
+    The Lambda(preprocess_input) layer inside the graph is resolved by
+    passing the function as a custom_object so Keras can deserialise it
+    by the name 'preprocess_input' without raising.
+
+    Side-effect: eagerly resolves and logs class labels so the mapping
+    is visible in startup logs before the first prediction.
+    """
+    get_class_labels()  # print label map at startup
+
+    tf = _try_load_tensorflow()
+    if tf is None:
+        logger.warning("TensorFlow not installed — running in API-only mode.")
+        return None, None
+
+    model_path = MODEL_PATH  # already a Path
+    if not model_path.exists():
+        logger.warning(f"Model file not found at {model_path} — running in API-only mode.")
+        return None, None
+
+    try:
+        preprocess_input = _resolve_preprocess_input(tf)
+
+        # Register the function under the exact name Keras serialised into
+        # the Lambda layer config so that from_config() can look it up.
+        @tf.keras.utils.register_keras_serializable(package="builtins")
+        def preprocess_input_registered(x):  # noqa: F811
+            return preprocess_input(x)
+
+        model = tf.keras.models.load_model(
+            str(model_path),
+            compile=False,
+            custom_objects={
+                "preprocess_input": preprocess_input,
+                "preprocess_input_registered": preprocess_input_registered,
+            },
+        )
+
+        # Derive the true input size from the model and update the module
+        # constant so any code that reads INPUT_SIZE stays in sync.
+        global INPUT_SIZE
+        INPUT_SIZE = get_model_input_size(model)
+
+        logger.info(
+            f"Model loaded: {model_path} | "
+            f"Input shape: {model.input_shape} | "
+            f"Resolved INPUT_SIZE: {INPUT_SIZE}"
+        )
+
+        # Validate output size matches loaded class count
+        num_model_outputs = model.output_shape[-1]
+        num_labels        = len(get_class_labels())
+        if num_model_outputs != num_labels:
+            logger.error(
+                f"Model output size ({num_model_outputs}) != class count "
+                f"({num_labels}). The model and class_names.json are out of sync. "
+                "Retrain or restore the correct class_names.json."
             )
-            self._cache[_KEY_SKIN_ISSUE]   = instance
-            self._outcome[_KEY_SKIN_ISSUE] = outcome
-        return self._cache[_KEY_SKIN_ISSUE]  # type: ignore[return-value]
 
-    @property
-    def skin_tone_model(self) -> SkinToneClassifier:
-        if _KEY_SKIN_TONE not in self._cache:
-            weights = self._safe_path("skin_tone_model_path")
-            instance, outcome = _load_model(
-                _KEY_SKIN_TONE, _TorchSkinTone, SkinToneClassifier, weights
-            )
-            self._cache[_KEY_SKIN_TONE]   = instance
-            self._outcome[_KEY_SKIN_TONE] = outcome
-        return self._cache[_KEY_SKIN_TONE]  # type: ignore[return-value]
-
-    def _safe_path(self, attr: str) -> Path:
-        """Read a path from settings without crashing if settings fail."""
-        try:
-            from backend.core.config import get_settings
-            return Path(getattr(get_settings(), attr))
-        except Exception as exc:
-            logger.warning("Could not resolve %s from settings: %s", attr, exc)
-            return Path(f"saved_models/{attr}.pt")  # safe non-existent fallback
-
-    def status(self) -> Dict[str, str]:
-        return {
-            key: ("loaded" if key in self._cache else "not_loaded")
-            for key in [_KEY_SKIN_ISSUE, _KEY_SKIN_TONE]
-        }
-
-    def model_info(self) -> Dict[str, str]:
-        return {
-            key: self._outcome.get(key, "not_loaded")
-            for key in [_KEY_SKIN_ISSUE, _KEY_SKIN_TONE]
-        }
+        return model, tf
+    except Exception as exc:
+        logger.error(f"Failed to load model: {exc}")
+        return None, None
 
 
-_registry: Optional[ModelRegistry] = None
+# ---------------------------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------------------------
+
+def preprocess_image(
+    image_bytes: bytes,
+    tf=None,
+    target_size: tuple[int, int] | None = None,
+) -> Optional[np.ndarray]:
+    """
+    Preprocess raw image bytes into a normalised numpy batch for inference.
+
+    Parameters
+    ----------
+    image_bytes : bytes
+        Raw JPEG/PNG image data.
+    tf : tensorflow module, optional
+        Pass the already-imported TF reference to skip a redundant import.
+    target_size : (H, W) tuple, optional
+        Resize target.  When None the module-level INPUT_SIZE is used.
+        Callers that hold a reference to the loaded model should pass
+        ``get_model_input_size(model)`` here so the size is always in sync
+        with the actual graph, regardless of env-var settings.
+
+    Pipeline
+    --------
+      1. Decode JPEG/PNG bytes → RGB tensor
+      2. Resize to target_size  (defaults to INPUT_SIZE)
+      3. Cast to float32 and normalise to [0, 1]
+      4. Expand dims → (1, H, W, 3) batch
+
+    Note: normalisation to [0, 1] is intentional.  The model's first layer
+    is a Lambda(efficientnet.preprocess_input) which expects values in
+    [0, 255] OR [0, 1] depending on how it was trained.  If predictions
+    look wrong, swap ``/ 255.0`` for no division and let EfficientNet's own
+    preprocess_input handle scaling.
+    """
+    if tf is None:
+        tf = _try_load_tensorflow()
+    if tf is None:
+        logger.error("TensorFlow unavailable — cannot preprocess image.")
+        return None
+
+    size = target_size if target_size is not None else INPUT_SIZE
+
+    try:
+        img_tensor = tf.image.decode_image(
+            image_bytes, channels=3, expand_animations=False
+        )
+        img_tensor = tf.image.resize(img_tensor, size)
+        img_tensor = tf.cast(img_tensor, tf.float32) / 255.0
+        img_tensor = tf.expand_dims(img_tensor, axis=0)
+        result = img_tensor.numpy()
+        logger.debug(
+            f"preprocess_image: output shape={result.shape} "
+            f"dtype={result.dtype} min={result.min():.3f} max={result.max():.3f}"
+        )
+        return result
+    except Exception as exc:
+        logger.error(f"Image preprocessing failed: {exc}")
+        return None
 
 
-def get_model_registry() -> ModelRegistry:
-    global _registry
-    if _registry is None:
-        _registry = ModelRegistry()
-    return _registry
+# ---------------------------------------------------------------------------
+# Grad-CAM helper
+# ---------------------------------------------------------------------------
 
-
-__all__ = [
-    "SkinIssueClassifier",
-    "SkinToneClassifier",
-    "ModelRegistry",
-    "get_model_registry",
-]
+def get_last_conv_layer(model) -> Optional[str]:
+    """
+    Dynamically detect the last convolutional layer name.
+    Works for MobileNetV2, EfficientNet, and other common backbones.
+    """
+    last_conv = None
+    for layer in model.layers:
+        if hasattr(layer, "filters") or "conv" in layer.name.lower():
+            last_conv = layer.name
+    return last_conv

@@ -10,6 +10,7 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
@@ -58,24 +59,42 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         upload_dir = _setting("upload_dir", None)
         if upload_dir:
-            import pathlib
-            pathlib.Path(upload_dir).mkdir(parents=True, exist_ok=True)
+            Path(upload_dir).mkdir(parents=True, exist_ok=True)
             logger.info("Upload directory ready: %s", upload_dir)
     except Exception as exc:
         logger.warning("Could not create upload directory: %s", exc)
 
-    # Model pre-load — failure is non-fatal; lazy load on first request.
+    # Model pre-load — uses new load_model() API; failure is non-fatal.
     try:
-        from backend.models.model_loader import get_model_registry
-        registry = get_model_registry()
-        _        = registry.skin_issue_model
-        _        = registry.skin_tone_model
-        logger.info("ML models pre-loaded. Status: %s", registry.status())
+        from backend.models.model_loader import load_model, get_model_input_size
+        model, tf = load_model()
+        if model is not None:
+            # Push the pre-loaded model into the predict module's cache so the
+            # first request does not trigger a second load from disk.
+            try:
+                import backend.api.predict as _predict_mod
+                _predict_mod._model      = model
+                _predict_mod._tf         = tf
+                _predict_mod._demo_mode  = False
+                _predict_mod._input_size = get_model_input_size(model)
+                logger.info(
+                    "ML model pre-loaded and injected into predict module: %s  "
+                    "input_size=%s",
+                    "backend/models/skin_issue_model.keras",
+                    _predict_mod._input_size,
+                )
+            except Exception as inject_exc:
+                logger.warning(
+                    "Could not inject pre-loaded model into predict module: %s",
+                    inject_exc,
+                )
+        else:
+            logger.warning("ML model unavailable — backend will run in API-only mode.")
     except Exception as exc:
         logger.warning("Model pre-load skipped: %s", exc)
 
     host = _setting("host", "0.0.0.0")
-    port = int(os.environ.get("PORT", _setting("port", 10000)))
+    port = int(os.environ.get("PORT", _setting("port", 8000)))
     logger.info("SkinAura backend ready → http://%s:%d%s/health", host, port, api_prefix)
 
     yield
@@ -89,10 +108,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     settings    = _get_settings()
-    app_name    = getattr(settings, "app_name",    "SkinAura")    if settings else "SkinAura"
-    app_version = getattr(settings, "app_version", "1.0.0")       if settings else "1.0.0"
-    api_prefix  = getattr(settings, "api_prefix",  "/api/v1")     if settings else "/api/v1"
-    origins     = getattr(settings, "allowed_origins", ["*"])      if settings else ["*"]
+    app_name    = getattr(settings, "app_name",       "SkinAura")  if settings else "SkinAura"
+    app_version = getattr(settings, "app_version",    "1.0.0")     if settings else "1.0.0"
+    api_prefix  = getattr(settings, "api_prefix",     "/api/v1")   if settings else "/api/v1"
+    origins     = getattr(settings, "allowed_origins", ["*"])       if settings else ["*"]
 
     app = FastAPI(
         title=       app_name,
@@ -138,20 +157,31 @@ def create_app() -> FastAPI:
     except Exception as exc:
         logger.warning("Custom exception handlers not registered: %s", exc)
 
-    # Routers — each wrapped so one bad import never kills the app.
-    def _include(module_path: str, attr: str, prefix: str, tag: str):
+    # ── Router registration ───────────────────────────────────────────────────
+    # Each router is wrapped individually so one bad import never kills the app.
+    # The "analyze" router is optional — it depends on SkinIssueClassifier which
+    # has been removed.  We suppress its warning to keep logs clean.
+    def _include(module_path: str, attr: str, prefix: str, tag: str, optional: bool = False):
         try:
             import importlib
             mod    = importlib.import_module(module_path)
             router = getattr(mod, attr)
             app.include_router(router, prefix=prefix)
-            logger.info("Router registered: %s%s", prefix, f" ({tag})")
+            logger.info("Router registered: %s (%s)", prefix, tag)
         except Exception as exc:
-            logger.warning("Could not register router '%s': %s", tag, exc)
+            if optional:
+                logger.debug(
+                    "Optional router '%s' not registered (expected if legacy "
+                    "dependencies have been removed): %s", tag, exc,
+                )
+            else:
+                logger.warning("Could not register router '%s': %s", tag, exc)
 
     _include("backend.api.health",  "router", api_prefix, "health")
     _include("backend.api.predict", "router", api_prefix, "predict")
-    _include("backend.api.analyze", "router", api_prefix, "analyze")
+    # analyze router is optional — requires legacy SkinIssueClassifier which
+    # has been superseded by model_loader.load_model().
+    _include("backend.api.analyze", "router", api_prefix, "analyze", optional=True)
 
     @app.get("/", include_in_schema=False)
     async def _root() -> JSONResponse:
@@ -161,7 +191,6 @@ def create_app() -> FastAPI:
             "docs":    "/docs",
             "health":  f"{api_prefix}/health",
             "predict": f"{api_prefix}/predict",
-            "analyze": f"{api_prefix}/analyze",
         })
 
     return app
@@ -176,7 +205,7 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.environ.get("PORT", _setting("port", 10000)))
+    port = int(os.environ.get("PORT", _setting("port", 8000)))
     uvicorn.run(
         "backend.main:app",
         host=      "0.0.0.0",
