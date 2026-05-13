@@ -4,7 +4,7 @@
 <img src="https://img.shields.io/badge/INFERENCE-90.25%25%20CONFIDENCE-FF6B6B?style=for-the-badge&labelColor=0d0d0d" />
 <img src="https://img.shields.io/badge/RENDER-DEPLOYED-46E3B7?style=for-the-badge&logo=render&logoColor=white&labelColor=0d0d0d" />
 
-<br /><br />    
+<br /><br />
 
 ```
 ███████╗██╗  ██╗██╗███╗   ██╗ █████╗ ██╗   ██╗██████╗  █████╗ 
@@ -152,16 +152,17 @@ streamlit run frontend/app.py
 
 ```
 SkinAura/
+├── assets/
 ├── backend/
-│   ├── main.py             # FastAPI app & inference endpoint
-│   ├── preprocessing.py    # CLAHE, normalization, resize
-│   ├── inference.py        # EfficientNetB0 model loading & prediction
-│   └── recommendation.py  # Severity estimation & rule engine
 ├── frontend/
-│   └── app.py              # Streamlit UI
-├── model/
-│   └── skinaura_model.h5   # Trained weights
+├── src/
+├── .gitattributes
+├── .gitignore
+├── cleanup_dataset.py
+├── metrics_logger.py
 ├── requirements.txt
+├── scripts
+├── train_model.py
 └── README.md
 ```
 
