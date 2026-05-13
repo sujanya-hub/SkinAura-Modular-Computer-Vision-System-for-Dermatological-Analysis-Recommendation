@@ -4,7 +4,7 @@
 <img src="https://img.shields.io/badge/INFERENCE-90.25%25%20CONFIDENCE-FF6B6B?style=for-the-badge&labelColor=0d0d0d" />
 <img src="https://img.shields.io/badge/RENDER-DEPLOYED-46E3B7?style=for-the-badge&logo=render&logoColor=white&labelColor=0d0d0d" />
 
-<br /><br />
+<br /><br />    
 
 ```
 ███████╗██╗  ██╗██╗███╗   ██╗ █████╗ ██╗   ██╗██████╗  █████╗ 
