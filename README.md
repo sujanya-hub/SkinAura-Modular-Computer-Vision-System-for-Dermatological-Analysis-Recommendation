@@ -39,31 +39,26 @@ Built with EfficientNetB0 and a 3-phase staged fine-tuning strategy, SkinAura ac
 
 ### AI Skin Analysis Dashboard
 
-![Skin Analysis](assets/skin-analysis-dashboard.png)
+![Dashboard](assets/dashboard.png)
 
 ---
 
-### Grad-CAM Attention Visualization
+### Personalized Recommendations
 
-![GradCAM](assets/gradcam-analysis.png)
-
----
-
-### AI Dermatology Insights & Predictions
-
-![Predictions](assets/ai-predictions.png)
-
----
-
-### Personalized Skincare Routine
-
-![Routine](assets/skincare-routine.png)
+![Recommendations](assets/recommendations.png)
 
 ---
 
 ### Upload & User Profile Interface
 
-![Upload UI](assets/upload-interface.png)
+![Upload UI](assets/upload-ui.png)
+
+---
+
+### AI Pipeline & Grad-CAM Analysis
+
+![Pipeline](assets/pipeline-dashboard.png)
+
 ---
 
 ## Performance Benchmarks
