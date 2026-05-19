@@ -43,6 +43,12 @@ Built with EfficientNetB0 and a 3-phase staged fine-tuning strategy, SkinAura ac
 
 ---
 
+### AI Pipeline & Grad-CAM Analysis
+
+![Pipeline Dashboard](assets/pipeline-dashboard.png)
+
+---
+
 ### Personalized Recommendations
 
 ![Recommendations](assets/recommendations.png)
@@ -52,12 +58,6 @@ Built with EfficientNetB0 and a 3-phase staged fine-tuning strategy, SkinAura ac
 ### Upload & User Profile Interface
 
 ![Upload UI](assets/upload-ui.png)
-
----
-
-### AI Pipeline & Grad-CAM Analysis
-
-![Pipeline](assets/pipeline-dashboard.png)
 
 ---
 
